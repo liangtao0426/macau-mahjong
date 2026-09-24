@@ -13,12 +13,12 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
   // 选中的玩法规则（默认杭州麻将）
   const [selectedRule, setSelectedRule] = useState<'杭州麻将' | '诸暨麻将'>('杭州麻将');
 
-  // 四个风位对应的玩家姓名
+  // 四个座位对应的玩家姓名（改为数字 1, 2, 3, 4）
   const [players, setPlayers] = useState([
-    { seat: '东', name: '阿强' },
-    { seat: '南', name: '小美' },
-    { seat: '西', name: '老陈' },
-    { seat: '北', name: '桃子' },
+    { seat: '1', name: '阿强' },
+    { seat: '2', name: '小美' },
+    { seat: '3', name: '老陈' },
+    { seat: '4', name: '桃子' },
   ]);
 
   // 常用牌友库
@@ -32,7 +32,7 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
     '王老板',
   ]);
 
-  // 修改某个风位的玩家姓名
+  // 修改某个座位的玩家姓名
   const handlePlayerNameChange = (index: number, newName: string) => {
     const updated = [...players];
     updated[index].name = newName;
@@ -49,22 +49,20 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
         players.map((p) => (p.name === friendName ? { ...p, name: '' } : p))
       );
     } else {
-      // 如果未在桌上，填入第一个为空的座位
+      // 如果未在桌上，自动填入第一个为空的座位
       const emptyIndex = players.findIndex((p) => !p.name.trim());
       if (emptyIndex !== -1) {
         handlePlayerNameChange(emptyIndex, friendName);
       } else {
-        // 如果满员，提示用户或不处理
-        alert('四个风位已满，请先点击某个座位编辑或清空再选择牌友');
+        alert('4个座位已满，请先清空或编辑某个座位再选择牌友');
       }
     }
   };
 
   const handleStart = () => {
-    // 校验4个玩家名字是否填齐
     const emptyPlayer = players.find((p) => !p.name.trim());
     if (emptyPlayer) {
-      alert(`请设置【${emptyPlayer.seat}】风位的玩家姓名`);
+      alert(`请设置【座位 ${emptyPlayer.seat}】的玩家姓名`);
       return;
     }
 
@@ -73,8 +71,6 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
         rule: selectedRule,
         players,
       });
-    } else {
-      alert(`开启新牌局成功！\n规则：${selectedRule}\n玩家：${players.map((p) => `${p.seat}:${p.name}`).join('、')}`);
     }
   };
 
@@ -96,7 +92,7 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
             </h1>
           </div>
           <p className="text-xs text-[#8C857B] mt-1.5 ml-11 font-medium">
-            设置雀局规则并安排风位
+            设置雀局规则并安排座位
           </p>
         </div>
 
@@ -138,18 +134,20 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
         </div>
       </section>
 
-      {/* 第二块：安排座位 (风位) */}
+      {/* 第二块：安排座位 (数字 1 2 3 4 卡通风格) */}
       <section className="mb-5">
         <h2 className="text-base font-bold text-[#0E5C4E] mb-3">
-          安排座位 (🐎友)
+          安排座位
         </h2>
 
         <div className="space-y-3">
           {players.map((item, index) => (
             <div key={item.seat} className="flex items-center space-x-3">
-              {/* 圆形暖黄色标签：东/南/西/北 */}
-              <div className="w-11 h-11 rounded-full bg-[#FAF0E6] border border-[#F2D7C4] text-[#C86328] font-extrabold text-base flex items-center justify-center shrink-0 shadow-xs">
-                {item.seat}
+              {/* 卡通风格圆形数字图标 (1, 2, 3, 4) */}
+              <div className="w-11 h-11 rounded-full bg-[#FAF0E6] border-2 border-[#F2CBB0] text-[#C86328] font-black text-xl flex items-center justify-center shrink-0 shadow-[0_2px_8px_rgba(200,99,40,0.12)] select-none font-mono tracking-tighter">
+                <span className="drop-shadow-[0_1px_1px_rgba(200,99,40,0.2)] transform active:scale-110 transition-transform">
+                  {item.seat}
+                </span>
               </div>
 
               {/* 输入框卡片 */}
@@ -158,7 +156,7 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
                   type="text"
                   value={item.name}
                   onChange={(e) => handlePlayerNameChange(index, e.target.value)}
-                  placeholder={`请输入${item.seat}位玩家姓名`}
+                  placeholder={`请输入玩家 ${item.seat} 姓名`}
                   className="bg-transparent text-sm font-bold text-[#2C3531] outline-none w-full placeholder:text-[#B5AD9F] placeholder:font-normal"
                 />
                 <Edit3 className="w-4 h-4 text-[#A0988C] shrink-0 ml-2 cursor-pointer" />
@@ -207,7 +205,7 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
         </div>
       </section>
 
-      {/* 底部居中开启新牌局主按钮 */}
+      {/* 底部开启新牌局主按钮 */}
       <div className="mt-auto pt-4">
         <button
           onClick={handleStart}
