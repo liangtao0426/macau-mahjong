@@ -1,0 +1,17 @@
+{
+  "short_name": "麻雀记",
+  "name": "麻雀记 - 记录每一场，回味每一局",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#F8F3EB",
+  "theme_color": "#0E5C4E",
+  "display": "standalone",
+  "orientation": "portrait"
+}

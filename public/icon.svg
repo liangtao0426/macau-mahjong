@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#0E5C4E"/>
+  <!-- 麻牌外框 -->
+  <rect x="136" y="106" width="240" height="300" rx="24" fill="#F8F3EB" stroke="#C86328" stroke-width="8"/>
+  <rect x="146" y="116" width="220" height="280" rx="16" fill="#FFFFFF" />
+  <!-- 麻将图案 - 雀字或竹节/骰子 -->
+  <text x="256" y="285" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif" font-size="140" font-weight="bold" fill="#0E5C4E" text-anchor="middle">雀</text>
+  <circle cx="256" cy="350" r="10" fill="#C86328"/>
+</svg>
