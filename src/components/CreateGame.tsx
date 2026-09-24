@@ -141,7 +141,7 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
       {/* 第二块：安排座位 (风位) */}
       <section className="mb-5">
         <h2 className="text-base font-bold text-[#0E5C4E] mb-3">
-          安排座位 (风位)
+          安排座位 (🐎友)
         </h2>
 
         <div className="space-y-3">
