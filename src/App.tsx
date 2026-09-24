@@ -5,10 +5,7 @@ import {
   Home, 
   Edit3, 
   Calendar, 
-  TrendingUp,
-  Wifi,
-  Signal,
-  Battery
+  TrendingUp
 } from 'lucide-react';
 
 // 历史对局数据结构
@@ -76,18 +73,10 @@ export default function App() {
       {/* 模拟手机容器 (Mobile Device Shell) */}
       <div className="w-full max-w-md bg-[#F8F3EB] flex flex-col min-h-screen relative pb-28 shadow-xl">
         
-        {/* 1. 顶栏 Safe Area / 状态栏 */}
-        <header className="pt-3 px-6 pb-2 flex justify-between items-center text-xs text-[#2C3531]/70 font-semibold select-none">
-          <span>9:41</span>
-          <div className="flex items-center space-x-1.5">
-            <Signal className="w-3.5 h-3.5" />
-            <Wifi className="w-3.5 h-3.5" />
-            <Battery className="w-4 h-4" />
-          </div>
-        </header>
 
-        {/* 顶部 APP 标题与 Slogan */}
-        <div className="px-6 pt-3 pb-4">
+
+        {/* 顶部 APP 标题与 Slogan (包含 iOS Safe Area 适配) */}
+        <div className="px-6 pt-7 pb-4">
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-extrabold text-[#0E5C4E] tracking-tight">
