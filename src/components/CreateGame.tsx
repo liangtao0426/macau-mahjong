@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, Edit3, Check } from 'lucide-react';
 
 interface CreateGameProps {
@@ -9,28 +9,42 @@ interface CreateGameProps {
   }) => void;
 }
 
+interface SavedFriend {
+  name: string;
+  updatedTime: number; // 用于倒序排序的时间戳
+}
+
+const STORAGE_KEY = 'mahjong_frequent_friends';
+
 export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
   // 选中的玩法规则（默认杭州麻将）
   const [selectedRule, setSelectedRule] = useState<'杭州麻将' | '诸暨麻将'>('杭州麻将');
 
-  // 四个座位对应的玩家姓名（改为数字 1, 2, 3, 4）
+  // 四个座位对应的玩家姓名（默认初始为空，每次进入清空）
   const [players, setPlayers] = useState([
-    { seat: '1', name: '阿强' },
-    { seat: '2', name: '小美' },
-    { seat: '3', name: '老陈' },
-    { seat: '4', name: '桃子' },
+    { seat: '1', name: '' },
+    { seat: '2', name: '' },
+    { seat: '3', name: '' },
+    { seat: '4', name: '' },
   ]);
 
-  // 常用牌友库
-  const [frequentFriends] = useState([
-    '阿强',
-    '小美',
-    '老陈',
-    '桃子',
-    '大林',
-    '静静',
-    '王老板',
-  ]);
+  // 常用牌友列表（按保存时间倒序）
+  const [frequentFriends, setFrequentFriends] = useState<SavedFriend[]>([]);
+
+  // 首次加载或每次进入时读取本地存储中的常用牌友
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed: SavedFriend[] = JSON.parse(stored);
+        // 按时间从新到旧（降序）排序
+        parsed.sort((a, b) => b.updatedTime - a.updatedTime);
+        setFrequentFriends(parsed);
+      }
+    } catch (e) {
+      console.error('读取常用牌友失败', e);
+    }
+  }, []);
 
   // 修改某个座位的玩家姓名
   const handlePlayerNameChange = (index: number, newName: string) => {
@@ -39,17 +53,17 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
     setPlayers(updated);
   };
 
-  // 点击常用牌友标签进行快速切换/选择
+  // 点击常用牌友标签进行快速选择 / 取消
   const handleFriendClick = (friendName: string) => {
     const isAlreadySelected = players.some((p) => p.name === friendName);
 
     if (isAlreadySelected) {
-      // 如果已在桌上，点击取消该玩家，清空相应座位
+      // 如果已被选入座位，点击取消，清空相应座位
       setPlayers(
         players.map((p) => (p.name === friendName ? { ...p, name: '' } : p))
       );
     } else {
-      // 如果未在桌上，自动填入第一个为空的座位
+      // 如果未选入，自动填入第一个为空的座位
       const emptyIndex = players.findIndex((p) => !p.name.trim());
       if (emptyIndex !== -1) {
         handlePlayerNameChange(emptyIndex, friendName);
@@ -59,13 +73,48 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
     }
   };
 
+  // 点击“开启新牌局”保存常用牌友并进入对局
   const handleStart = () => {
+    // 检查是否有未填写的座位
     const emptyPlayer = players.find((p) => !p.name.trim());
     if (emptyPlayer) {
       alert(`请设置【座位 ${emptyPlayer.seat}】的玩家姓名`);
       return;
     }
 
+    // 收集所有有效输入的玩家名字并更新本地常用牌友库
+    const now = Date.now();
+    const currentFriends: SavedFriend[] = [...frequentFriends];
+
+    players.forEach((p) => {
+      const trimmedName = p.name.trim();
+      if (!trimmedName) return;
+
+      const existingIndex = currentFriends.findIndex((f) => f.name === trimmedName);
+      if (existingIndex !== -1) {
+        // 更新现有牌友的时间戳（置顶为最新使用）
+        currentFriends[existingIndex].updatedTime = now;
+      } else {
+        // 添加新牌友
+        currentFriends.push({
+          name: trimmedName,
+          updatedTime: now,
+        });
+      }
+    });
+
+    // 重新按最新保存/使用时间降序排序
+    currentFriends.sort((a, b) => b.updatedTime - a.updatedTime);
+
+    // 持久化保存在 LocalStorage 中
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentFriends));
+      setFrequentFriends(currentFriends);
+    } catch (e) {
+      console.error('保存常用牌友失败', e);
+    }
+
+    // 回调外部开启对局
     if (onStartGame) {
       onStartGame({
         rule: selectedRule,
@@ -134,7 +183,7 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
         </div>
       </section>
 
-      {/* 第二块：安排座位 (数字 1 2 3 4 卡通风格) */}
+      {/* 第二块：安排座位 (数字 1 2 3 4 卡通风格，初始为空) */}
       <section className="mb-5">
         <h2 className="text-base font-bold text-[#0E5C4E] mb-3">
           安排座位
@@ -143,9 +192,9 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
         <div className="space-y-3">
           {players.map((item, index) => (
             <div key={item.seat} className="flex items-center space-x-3">
-              {/* 卡通风格圆形数字图标 (1, 2, 3, 4) */}
+              {/* 卡通风格数字图标 1, 2, 3, 4 */}
               <div className="w-11 h-11 rounded-full bg-[#FAF0E6] border-2 border-[#F2CBB0] text-[#C86328] font-black text-xl flex items-center justify-center shrink-0 shadow-[0_2px_8px_rgba(200,99,40,0.12)] select-none font-mono tracking-tighter">
-                <span className="drop-shadow-[0_1px_1px_rgba(200,99,40,0.2)] transform active:scale-110 transition-transform">
+                <span className="drop-shadow-[0_1px_1px_rgba(200,99,40,0.2)]">
                   {item.seat}
                 </span>
               </div>
@@ -178,31 +227,37 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
         </div>
       </section>
 
-      {/* 第三块：常用牌友 */}
+      {/* 第三块：常用牌友 (展示从 LocalStorage 中读取并按保存时间倒序排列的牌友) */}
       <section className="mb-6">
         <h2 className="text-base font-bold text-[#0E5C4E] mb-3">
           常用牌友
         </h2>
 
-        <div className="flex flex-wrap gap-2.5">
-          {frequentFriends.map((friend) => {
-            const isSelected = players.some((p) => p.name === friend);
-            return (
-              <button
-                key={friend}
-                onClick={() => handleFriendClick(friend)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 transition-all active:scale-95 ${
-                  isSelected
-                    ? 'bg-[#E2F1ED] border border-[#B3DCD4] text-[#0E5C4E] shadow-2xs'
-                    : 'bg-white border border-[#EAE3D7] text-[#5A5248] hover:border-[#0E5C4E]/30'
-                }`}
-              >
-                <span>{friend}</span>
-                {isSelected && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
-              </button>
-            );
-          })}
-        </div>
+        {frequentFriends.length > 0 ? (
+          <div className="flex flex-wrap gap-2.5">
+            {frequentFriends.map((friend) => {
+              const isSelected = players.some((p) => p.name === friend.name);
+              return (
+                <button
+                  key={friend.name}
+                  onClick={() => handleFriendClick(friend.name)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 transition-all active:scale-95 ${
+                    isSelected
+                      ? 'bg-[#E2F1ED] border border-[#B3DCD4] text-[#0E5C4E] shadow-2xs'
+                      : 'bg-white border border-[#EAE3D7] text-[#5A5248] hover:border-[#0E5C4E]/30'
+                  }`}
+                >
+                  <span>{friend.name}</span>
+                  {isSelected && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-white/60 border border-dashed border-[#E5DCD0] rounded-2xl p-4 text-center text-xs text-[#8C857B]">
+            暂无常用牌友，开启新牌局后将自动保存牌友名字
+          </div>
+        )}
       </section>
 
       {/* 底部开启新牌局主按钮 */}
