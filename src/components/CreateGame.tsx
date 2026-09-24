@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ChevronLeft, Edit3, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, Edit3, Check, X, Trash2 } from 'lucide-react';
 
 interface CreateGameProps {
   onBack?: () => void;
@@ -31,6 +31,9 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
   // 常用牌友列表（按保存时间倒序）
   const [frequentFriends, setFrequentFriends] = useState<SavedFriend[]>([]);
 
+  // 是否处于牌友删除管理模式
+  const [isManagingFriends, setIsManagingFriends] = useState(false);
+
   // 首次加载或每次进入时读取本地存储中的常用牌友
   useEffect(() => {
     try {
@@ -55,6 +58,12 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
 
   // 点击常用牌友标签进行快速选择 / 取消
   const handleFriendClick = (friendName: string) => {
+    // 管理模式下点击则执行删除
+    if (isManagingFriends) {
+      handleDeleteFriend(friendName);
+      return;
+    }
+
     const isAlreadySelected = players.some((p) => p.name === friendName);
 
     if (isAlreadySelected) {
@@ -70,6 +79,26 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
       } else {
         alert('4个座位已满，请先清空或编辑某个座位再选择牌友');
       }
+    }
+  };
+
+  // 删除某个常用牌友
+  const handleDeleteFriend = (friendName: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    const updated = frequentFriends.filter((f) => f.name !== friendName);
+    setFrequentFriends(updated);
+
+    // 如果被删除的牌友正好在当前座位上，同步清空
+    setPlayers(
+      players.map((p) => (p.name === friendName ? { ...p, name: '' } : p))
+    );
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch (err) {
+      console.error('更新常用牌友失败', err);
     }
   };
 
@@ -227,29 +256,71 @@ export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
         </div>
       </section>
 
-      {/* 第三块：常用牌友 (展示从 LocalStorage 中读取并按保存时间倒序排列的牌友) */}
+      {/* 第三块：常用牌友 (支持删除与管理) */}
       <section className="mb-6">
-        <h2 className="text-base font-bold text-[#0E5C4E] mb-3">
-          常用牌友
-        </h2>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-base font-bold text-[#0E5C4E]">
+            常用牌友
+          </h2>
+          {frequentFriends.length > 0 && (
+            <button
+              onClick={() => setIsManagingFriends(!isManagingFriends)}
+              className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center space-x-1 transition-colors ${
+                isManagingFriends
+                  ? 'bg-red-100 text-red-600 border border-red-200'
+                  : 'text-[#8C857B] hover:text-[#0E5C4E]'
+              }`}
+            >
+              {isManagingFriends ? (
+                <span>完成删除</span>
+              ) : (
+                <>
+                  <Trash2 className="w-3 h-3 inline-block" />
+                  <span>管理</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
 
         {frequentFriends.length > 0 ? (
           <div className="flex flex-wrap gap-2.5">
             {frequentFriends.map((friend) => {
               const isSelected = players.some((p) => p.name === friend.name);
               return (
-                <button
+                <div
                   key={friend.name}
                   onClick={() => handleFriendClick(friend.name)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 transition-all active:scale-95 ${
-                    isSelected
+                  className={`relative px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 transition-all cursor-pointer active:scale-95 ${
+                    isManagingFriends
+                      ? 'bg-red-50 border border-red-200 text-red-700 animate-pulse'
+                      : isSelected
                       ? 'bg-[#E2F1ED] border border-[#B3DCD4] text-[#0E5C4E] shadow-2xs'
                       : 'bg-white border border-[#EAE3D7] text-[#5A5248] hover:border-[#0E5C4E]/30'
                   }`}
                 >
                   <span>{friend.name}</span>
-                  {isSelected && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
-                </button>
+                  {isSelected && !isManagingFriends && (
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  )}
+                  {/* 删除按钮 */}
+                  {isManagingFriends ? (
+                    <span 
+                      onClick={(e) => handleDeleteFriend(friend.name, e)}
+                      className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold ml-1 hover:bg-red-600"
+                    >
+                      ✕
+                    </span>
+                  ) : (
+                    <span
+                      onClick={(e) => handleDeleteFriend(friend.name, e)}
+                      className="text-[#B0A89C] hover:text-red-500 transition-colors ml-1"
+                      title="删除此牌友"
+                    >
+                      <X className="w-3 h-3" />
+                    </span>
+                  )}
+                </div>
               );
             })}
           </div>
