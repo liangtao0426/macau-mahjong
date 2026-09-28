@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   ChevronRight, 
+  ChevronDown,
   Plus, 
   Home, 
   Edit3, 
@@ -33,6 +34,7 @@ interface MatchRecord {
   totalRounds: number;
   duration: string;
   players: PlayerScore[];
+  rounds?: RoundRecord[];
 }
 
 // 格式化时间与日期展示（如：03月05日 14:22）
@@ -140,6 +142,17 @@ export default function App() {
     });
   }, [historyList, historyRuleFilter, selectedMonth]);
 
+  // 控制历史页面中各对局卡片每轮明细的展开/折叠状态（默认展开）
+  const [collapsedHistoryCardIds, setCollapsedHistoryCardIds] = useState<Record<string, boolean>>({});
+
+  const toggleHistoryCard = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setCollapsedHistoryCardIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   // 无法开启新牌局的拦截提示弹窗
   const [showActiveAlertModal, setShowActiveAlertModal] = useState(false);
 
@@ -231,6 +244,7 @@ export default function App() {
         score: activeGameScores[p.name] || 0,
         avatarIndex: idx % PLAYER_AVATARS.length,
       })),
+      rounds: activeGame.rounds,
     };
 
     // 保存到历史列表头部
@@ -715,7 +729,7 @@ export default function App() {
                     {/* 分隔线 */}
                     <div className="border-t border-[#F5EFE6] my-3"></div>
 
-                    {/* 4 位玩家横向排布 */}
+                    {/* 4 位玩家当前累计总得分横向排布 */}
                     <div className="grid grid-cols-4 gap-2 text-center py-0.5">
                       {activeGame.players.map((p) => {
                         const score = activeGameScores[p.name] || 0;
@@ -739,6 +753,80 @@ export default function App() {
                         );
                       })}
                     </div>
+
+                    {/* 进行中牌局：每一轮具体输赢明细 */}
+                    {activeGame.rounds && activeGame.rounds.length > 0 && (
+                      <div className="mt-3 pt-2.5 border-t border-[#F5EFE6]">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-bold text-[#0E5C4E] flex items-center">
+                            <span>每轮具体输赢</span>
+                            <span className="ml-1.5 text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-bold">
+                              已记 {activeGame.rounds.length} 轮
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => toggleHistoryCard(activeGame.id, e)}
+                            className="text-[11px] font-bold text-[#8C857B] hover:text-[#0E5C4E] flex items-center transition-colors"
+                          >
+                            <span>{!collapsedHistoryCardIds[activeGame.id] ? '收起明细' : '展开明细'}</span>
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 ml-0.5 transition-transform duration-200 ${
+                                !collapsedHistoryCardIds[activeGame.id] ? 'rotate-180 text-[#0E5C4E]' : ''
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        {!collapsedHistoryCardIds[activeGame.id] && (
+                          <div className="space-y-2 mt-2">
+                            {activeGame.rounds.map((round) => (
+                              <div
+                                key={round.roundNumber}
+                                className="bg-[#FAF7F2] rounded-xl p-2.5 border border-[#F0EADF]"
+                              >
+                                <div className="flex justify-between items-center mb-1.5 text-xs">
+                                  <span className="font-bold text-[#2C3531]">
+                                    第 {round.roundNumber} 轮
+                                    {round.winnerName && (
+                                      <span className="text-[11px] text-[#8C857B] font-normal ml-2">
+                                        胡牌：{round.winnerName}
+                                      </span>
+                                    )}
+                                  </span>
+                                  {round.winScore > 0 && (
+                                    <span className="bg-[#FEE2E2] text-[#DC2626] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                      +{round.winScore}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-4 gap-1.5 text-center">
+                                  {round.playerScores.map((ps) => (
+                                    <div key={ps.name} className="truncate">
+                                      <div className="text-[10px] text-[#8C857B] truncate">
+                                        {ps.name}
+                                      </div>
+                                      <div
+                                        className={`text-xs font-extrabold mt-0.5 ${
+                                          ps.score > 0
+                                            ? 'text-[#DC2626]'
+                                            : ps.score < 0
+                                            ? 'text-[#16A34A]'
+                                            : 'text-[#8C857B]'
+                                        }`}
+                                      >
+                                        {ps.score > 0 ? `+${ps.score}` : ps.score}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -781,7 +869,7 @@ export default function App() {
                   {/* 分割线 */}
                   <div className="border-t border-[#F5EFE6] my-3"></div>
 
-                  {/* 4 位玩家横向排布：姓名在上，得分在下，红赢绿输 */}
+                  {/* 4 位玩家全场总得分横向排布：姓名在上，得分在下，红赢绿输 */}
                   <div className="grid grid-cols-4 gap-2 text-center py-0.5">
                     {item.players.map((p, idx) => (
                       <div key={idx} className="truncate">
@@ -802,6 +890,81 @@ export default function App() {
                       </div>
                     ))}
                   </div>
+
+                  {/* 每一轮具体输赢明细板块 */}
+                  {item.rounds && item.rounds.length > 0 ? (
+                    <div className="mt-3 pt-2.5 border-t border-[#F5EFE6]">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-[#0E5C4E] flex items-center">
+                          <span>每轮具体输赢</span>
+                          <span className="ml-1.5 text-[10px] bg-[#EBF4F2] text-[#0E5C4E] px-1.5 py-0.5 rounded-full font-bold">
+                            共 {item.rounds.length} 轮
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => toggleHistoryCard(item.id, e)}
+                          className="text-[11px] font-bold text-[#8C857B] hover:text-[#0E5C4E] flex items-center transition-colors"
+                        >
+                          <span>{!collapsedHistoryCardIds[item.id] ? '收起明细' : '展开明细'}</span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 ml-0.5 transition-transform duration-200 ${
+                              !collapsedHistoryCardIds[item.id] ? 'rotate-180 text-[#0E5C4E]' : ''
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {!collapsedHistoryCardIds[item.id] && (
+                        <div className="space-y-2 mt-2">
+                          {item.rounds.map((round) => (
+                            <div
+                              key={round.roundNumber}
+                              className="bg-[#FAF7F2] rounded-xl p-2.5 border border-[#F0EADF]"
+                            >
+                              <div className="flex justify-between items-center mb-1.5 text-xs">
+                                <span className="font-bold text-[#2C3531]">
+                                  第 {round.roundNumber} 轮
+                                  {round.winnerName && (
+                                    <span className="text-[11px] text-[#8C857B] font-normal ml-2">
+                                      胡牌：{round.winnerName}
+                                    </span>
+                                  )}
+                                </span>
+                                {round.winScore > 0 && (
+                                  <span className="bg-[#FEE2E2] text-[#DC2626] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    +{round.winScore}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* 4 位玩家此轮具体得分 */}
+                              <div className="grid grid-cols-4 gap-1.5 text-center">
+                                {round.playerScores.map((ps) => (
+                                  <div key={ps.name} className="truncate">
+                                    <div className="text-[10px] text-[#8C857B] truncate">
+                                      {ps.name}
+                                    </div>
+                                    <div
+                                      className={`text-xs font-extrabold mt-0.5 ${
+                                        ps.score > 0
+                                          ? 'text-[#DC2626]'
+                                          : ps.score < 0
+                                          ? 'text-[#16A34A]'
+                                          : 'text-[#8C857B]'
+                                      }`}
+                                    >
+                                      {ps.score > 0 ? `+${ps.score}` : ps.score}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               ))}
 
