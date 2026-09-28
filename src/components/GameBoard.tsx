@@ -24,17 +24,22 @@ export interface GameData {
   status: '进行中' | '已结束';
   players: Player[];
   rounds: RoundRecord[];
+  startTime?: number;
+  endTime?: number;
 }
 
 interface GameBoardProps {
   game: GameData;
   onBack: () => void;
   onAddRound: (round: RoundRecord) => void;
+  onEndGame: () => void;
 }
 
-export default function GameBoard({ game, onBack, onAddRound }: GameBoardProps) {
+export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameBoardProps) {
   // 控制记录新一轮弹窗显隐
   const [showRecordModal, setShowRecordModal] = useState(false);
+  // 控制结束对局确认弹窗显隐
+  const [showEndConfirmModal, setShowEndConfirmModal] = useState(false);
 
   // 记分表单状态
   const [selectedWinner, setSelectedWinner] = useState<string>(game.players[0]?.name || '');
@@ -135,10 +140,18 @@ export default function GameBoard({ game, onBack, onAddRound }: GameBoardProps) 
           </p>
         </div>
 
-        {/* 右上角装饰短线 */}
-        <div className="flex items-center space-x-1 mt-2">
-          <span className="w-5 h-1.5 bg-[#C86328] rounded-full inline-block"></span>
-          <span className="w-3 h-1.5 bg-[#0E5C4E] rounded-full inline-block"></span>
+        {/* 右上角结束牌局按钮与装饰短线 */}
+        <div className="flex items-center space-x-2.5 mt-1">
+          <button
+            onClick={() => setShowEndConfirmModal(true)}
+            className="px-3 py-1 bg-[#FAF0E6] text-[#C86328] hover:bg-[#F2D7C4] border border-[#F2D7C4] rounded-full text-xs font-bold transition-all active:scale-95 shadow-2xs"
+          >
+            结束牌局
+          </button>
+          <div className="flex items-center space-x-1">
+            <span className="w-5 h-1.5 bg-[#C86328] rounded-full inline-block"></span>
+            <span className="w-3 h-1.5 bg-[#0E5C4E] rounded-full inline-block"></span>
+          </div>
         </div>
       </div>
 
@@ -412,6 +425,38 @@ export default function GameBoard({ game, onBack, onAddRound }: GameBoardProps) 
                 className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-sm rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center active:scale-[0.98] transition-all hover:bg-[#0A473C]"
               >
                 保存此轮记分
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. 结束对局确认弹窗 */}
+      {showEndConfirmModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF]">
+            <h3 className="text-base font-bold text-[#0E5C4E] mb-2 text-center">
+              确认结束本场牌局？
+            </h3>
+            <p className="text-xs text-[#8C857B] text-center mb-6 leading-relaxed">
+              本场【{game.rule}】已完成 {game.rounds.length} 轮记分。<br />
+              结束后将完成最终积分核算并保存到历史战绩中，无法再继续记录新轮次。
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowEndConfirmModal(false)}
+                className="flex-1 py-3 bg-[#EFE8DD] text-[#5A5248] rounded-full text-xs font-bold active:scale-95 transition-all"
+              >
+                继续记分
+              </button>
+              <button
+                onClick={() => {
+                  setShowEndConfirmModal(false);
+                  onEndGame();
+                }}
+                className="flex-1 py-3 bg-[#C86328] text-white rounded-full text-xs font-bold shadow-md hover:bg-[#B3521B] active:scale-95 transition-all"
+              >
+                确认结束
               </button>
             </div>
           </div>
