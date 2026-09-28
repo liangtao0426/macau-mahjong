@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, X } from 'lucide-react';
+import { PLAYER_AVATARS } from './Avatars';
 
 export interface Player {
   seat: string; // '东' | '南' | '西' | '北' 或者 '1' | '2' | '3' | '4'
@@ -167,20 +168,24 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
           </span>
         </div>
 
-        {/* 4 位玩家横向累计分数统计卡片 */}
-        <div className="flex space-x-2.5 overflow-x-auto no-scrollbar pb-1">
-          {game.players.map((p) => {
+        {/* 4 位玩家直接平铺展示（无需左右滑动），带上卡通头像 */}
+        <div className="grid grid-cols-4 gap-2">
+          {game.players.map((p, idx) => {
             const totalScore = cumulativeScores[p.name] || 0;
             return (
               <div
                 key={p.name}
-                className="flex-1 min-w-[95px] bg-[#FAF7F2] rounded-xl p-3 flex flex-col items-center justify-center border border-[#F2ECE1]"
+                className="bg-[#FAF7F2] rounded-xl p-2.5 flex flex-col items-center justify-center border border-[#F2ECE1] shadow-2xs"
               >
-                <span className="text-xs text-[#8C857B] font-medium truncate max-w-full">
+                {/* 对应卡通头像 */}
+                <div className="w-8 h-8 rounded-full overflow-hidden shadow-2xs border border-[#E8DFC8] mb-1.5 shrink-0 bg-white">
+                  {PLAYER_AVATARS[idx % PLAYER_AVATARS.length]}
+                </div>
+                <span className="text-[11px] text-[#5A5248] font-bold truncate max-w-full leading-tight">
                   {p.seat} · {p.name}
                 </span>
                 <span
-                  className={`text-xl font-extrabold my-1 ${
+                  className={`text-base font-black my-0.5 tracking-tight ${
                     totalScore > 0
                       ? 'text-[#16A34A]'
                       : totalScore < 0
@@ -190,7 +195,7 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                 >
                   {totalScore > 0 ? `+${totalScore}` : totalScore}
                 </span>
-                <span className="text-[11px] text-[#A0988C]">本场累计</span>
+                <span className="text-[10px] text-[#A0988C] font-medium scale-90">本场累计</span>
               </div>
             );
           })}
