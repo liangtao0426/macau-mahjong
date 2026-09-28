@@ -35,31 +35,14 @@ interface MatchRecord {
   players: PlayerScore[];
 }
 
-// 格式化时间与日期展示
+// 格式化时间与日期展示（如：03月05日 14:22）
 const formatGameDate = (timestamp?: number) => {
-  if (!timestamp) {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `今天 ${hours}:${minutes}`;
-  }
-  const date = new Date(timestamp);
-  const now = new Date();
-  const isToday =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate();
-
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const timeStr = `${hours}:${minutes}`;
-
-  if (isToday) {
-    return `今天 ${timeStr}`;
-  }
+  const date = timestamp ? new Date(timestamp) : new Date();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  return `${month}月${day}日 ${timeStr}`;
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${month}月${day}日 ${hours}:${minutes}`;
 };
 
 // 计算牌局时长
@@ -112,6 +95,50 @@ export default function App() {
     }
     return [];
   });
+
+  // 历史牌局筛选：玩法筛选（全部 / 杭州 / 诸暨）
+  const [historyRuleFilter, setHistoryRuleFilter] = useState<'全部' | '杭州' | '诸暨'>('全部');
+  // 历史牌局筛选：月份筛选（默认 2026年3月）
+  const [selectedMonth, setSelectedMonth] = useState<string>('2026年3月');
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+
+  // 可供筛选的月份列表
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    set.add('2026年3月');
+    set.add('2026年2月');
+    const now = new Date();
+    const currentYM = `${now.getFullYear()}年${String(now.getMonth() + 1).padStart(2, '0')}月`;
+    set.add(currentYM);
+    historyList.forEach((h) => {
+      const match = h.date.match(/(\d{2})月/);
+      if (match) {
+        set.add(`2026年${parseInt(match[1], 10)}月`);
+      }
+    });
+    return ['全部月份', ...Array.from(set)];
+  }, [historyList]);
+
+  // 根据当前玩法与月份过滤出的历史对局
+  const filteredHistory = useMemo(() => {
+    return historyList.filter((item) => {
+      // 玩法筛选：全部 / 杭州 / 诸暨
+      if (historyRuleFilter === '杭州' && item.type !== '杭州麻将') return false;
+      if (historyRuleFilter === '诸暨' && item.type !== '诸暨麻将') return false;
+
+      // 月份筛选
+      if (selectedMonth !== '全部月份') {
+        const match = selectedMonth.match(/(\d+)月/);
+        if (match) {
+          const monthNum = match[1].padStart(2, '0');
+          if (!item.date.includes(`${monthNum}月`)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+  }, [historyList, historyRuleFilter, selectedMonth]);
 
   // 无法开启新牌局的拦截提示弹窗
   const [showActiveAlertModal, setShowActiveAlertModal] = useState(false);
@@ -594,118 +621,156 @@ export default function App() {
             </div>
           </>
         ) : activeTab === 'history' ? (
-          /* 【历史】视图：展示所有历史战绩以及进行中对局 */
-          <div className="flex-1 flex flex-col px-5 pt-7 pb-24">
-            <div className="flex justify-between items-center mb-5">
-              <div>
-                <h1 className="text-xl font-extrabold text-[#0E5C4E] tracking-tight">
-                  对局历史
-                </h1>
-                <p className="text-xs text-[#8C857B] mt-0.5 font-medium">
-                  共记录 {historyList.length + (activeGame ? 1 : 0)} 场对局
-                </p>
+          /* 【历史牌局】视图：严格按照参考设计 UI 实现 */
+          <div className="flex-1 flex flex-col pb-24">
+            {/* 顶部标题区 */}
+            <div className="px-6 pt-7 pb-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h1 className="text-2xl font-extrabold text-[#0E5C4E] tracking-tight">
+                    历史牌局
+                  </h1>
+                  <p className="text-xs text-[#8C857B] mt-1 font-medium tracking-wide">
+                    过往对局记录与历史账目
+                  </p>
+                </div>
+                {/* 右侧国风装饰短线 */}
+                <div className="flex items-center space-x-1 mt-2">
+                  <span className="w-5 h-1.5 bg-[#C86328] rounded-full inline-block"></span>
+                  <span className="w-3 h-1.5 bg-[#0E5C4E] rounded-full inline-block"></span>
+                </div>
               </div>
-              <button
-                onClick={() => setActiveTab('home')}
-                className="text-xs text-[#0E5C4E] font-bold bg-[#EBF4F2] px-3 py-1.5 rounded-full hover:bg-[#DFECE9] transition-colors"
-              >
-                返回首页
-              </button>
             </div>
 
-            {/* 战绩列表 */}
-            <div className="space-y-3.5 flex-1">
-              {/* 正在进行中的牌局 */}
-              {activeGame && (
-                <div
-                  onClick={() => {
-                    setScoreSubView('board');
-                    setActiveTab('score');
-                  }}
-                  className="bg-white rounded-2xl p-4 shadow-[0_4px_16px_rgba(14,92,78,0.08)] border-2 border-[#0E5C4E]/30 relative cursor-pointer active:scale-[0.99] transition-all hover:border-[#0E5C4E]"
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-[11px] px-2 py-0.5 rounded font-semibold border ${
-                        activeGame.rule === '杭州麻将' 
-                          ? 'border-[#0E5C4E] text-[#0E5C4E] bg-[#0E5C4E]/5' 
-                          : 'border-[#C86328] text-[#C86328] bg-[#C86328]/5'
-                      }`}>
-                        {activeGame.rule}
-                      </span>
-                      <span className="inline-flex items-center space-x-1 text-[10px] px-2 py-0.5 rounded-full font-bold bg-[#D1FAE5] text-[#059669] border border-[#A7F3D0]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
-                        <span>进行中 · 实时联动</span>
+            {/* 筛选栏：左侧月份选择器，右侧全部/杭州/诸暨玩法筛选 */}
+            <div className="px-5 mb-4 flex justify-between items-center">
+              {/* 左侧月份胶囊 */}
+              <button
+                onClick={() => setShowMonthPicker(true)}
+                className="bg-[#EDF5F3] text-[#0E5C4E] px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center shadow-2xs hover:bg-[#DFECE9] active:scale-95 transition-all"
+              >
+                <span>{selectedMonth}</span>
+                <Calendar className="w-3.5 h-3.5 ml-1.5 text-[#0E5C4E]" />
+              </button>
+
+              {/* 右侧玩法筛选胶囊组：全部、杭州、诸暨 */}
+              <div className="flex items-center space-x-1.5">
+                {(['全部', '杭州', '诸暨'] as const).map((tab) => {
+                  const isActive = historyRuleFilter === tab;
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setHistoryRuleFilter(tab)}
+                      className={`px-3.5 py-1 rounded-full text-xs transition-all ${
+                        isActive
+                          ? 'bg-[#0E5C4E] text-white font-bold shadow-xs'
+                          : 'bg-white text-[#8C857B] hover:text-[#0E5C4E] border border-transparent font-medium'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 对局卡片列表 */}
+            <div className="px-5 space-y-3.5 flex-1">
+              {/* 正在进行中的牌局（如果符合当前玩法筛选） */}
+              {activeGame &&
+                (historyRuleFilter === '全部' ||
+                  historyRuleFilter === (activeGame.rule === '杭州麻将' ? '杭州' : '诸暨')) && (
+                  <div
+                    onClick={() => {
+                      setScoreSubView('board');
+                      setActiveTab('score');
+                    }}
+                    className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border-2 border-[#0E5C4E]/40 relative cursor-pointer active:scale-[0.99] transition-all hover:border-[#0E5C4E]"
+                  >
+                    {/* 卡片头部：玩法标签 + 进行中状态 + 日期时间 + 轮数 */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <span
+                          className={`text-[11px] px-2 py-0.5 rounded-lg font-bold border ${
+                            activeGame.rule === '杭州麻将'
+                              ? 'border-[#0E5C4E] text-[#0E5C4E] bg-white'
+                              : 'border-[#C86328] text-[#C86328] bg-white'
+                          }`}
+                        >
+                          {activeGame.rule}
+                        </span>
+                        <span className="inline-flex items-center space-x-1 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-[#D1FAE5] text-[#059669] border border-[#A7F3D0]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
+                          <span>进行中</span>
+                        </span>
+                        <span className="text-xs text-[#8C857B] font-medium">
+                          {formatGameDate(activeGame.startTime)}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-[#C86328]">
+                        {activeGame.rounds.length}局
                       </span>
                     </div>
-                    <span className="text-xs font-bold text-[#C86328]">
-                      已记 {activeGame.rounds.length} 轮
-                    </span>
-                  </div>
 
-                  <div className="flex justify-between items-center mt-2.5 text-xs">
-                    <span className="text-[#8C857B] flex items-center">
-                      <Clock className="w-3.5 h-3.5 mr-1 text-[#A0988C]" />
-                      {formatGameDate(activeGame.startTime)} · {getGameDuration(activeGame.startTime, activeGame.rounds.length)}
-                    </span>
-                    <span className="text-xs font-bold text-[#0E5C4E] flex items-center">
-                      继续记分 <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
-                    </span>
-                  </div>
+                    {/* 分隔线 */}
+                    <div className="border-t border-[#F5EFE6] my-3"></div>
 
-                  <div className="border-t border-[#F5EFE6] my-2.5"></div>
-
-                  <div className="space-y-2">
-                    {activeGame.players.map((p, idx) => {
-                      const score = activeGameScores[p.name] || 0;
-                      return (
-                        <div key={p.name} className="flex justify-between items-center text-xs">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-[#E8DFC8] bg-white shadow-2xs">
-                              {PLAYER_AVATARS[idx % PLAYER_AVATARS.length]}
+                    {/* 4 位玩家横向排布 */}
+                    <div className="grid grid-cols-4 gap-2 text-center py-0.5">
+                      {activeGame.players.map((p) => {
+                        const score = activeGameScores[p.name] || 0;
+                        return (
+                          <div key={p.name} className="truncate">
+                            <div className="text-xs text-[#8C857B] font-medium truncate">
+                              {p.name}
                             </div>
-                            <span className="text-[#3A4440] font-medium">
-                              {p.seat} · {p.name}
-                            </span>
+                            <div
+                              className={`text-sm font-extrabold mt-1.5 ${
+                                score > 0
+                                  ? 'text-[#DC2626]'
+                                  : score < 0
+                                  ? 'text-[#16A34A]'
+                                  : 'text-[#2C3531]'
+                              }`}
+                            >
+                              {score > 0 ? `+${score}` : score}
+                            </div>
                           </div>
-                          <span className={`font-bold text-sm ${
-                            score > 0 ? 'text-[#DC2626]' : score < 0 ? 'text-[#16A34A]' : 'text-[#8C857B]'
-                          }`}>
-                            {score > 0 ? `+${score}` : score}
-                          </span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* 已结束的历史对局 */}
-              {historyList.map((item) => (
+              {/* 已完成的历史对局卡片列表 */}
+              {filteredHistory.map((item) => (
                 <div
                   key={item.id}
                   className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-[#F0EADF] relative group"
                 >
+                  {/* 第一行：玩法标签 + 时间 + 共N局 */}
                   <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-[11px] px-2 py-0.5 rounded font-semibold border ${
-                        item.type === '杭州麻将' 
-                          ? 'border-[#0E5C4E] text-[#0E5C4E] bg-[#0E5C4E]/5' 
-                          : 'border-[#C86328] text-[#C86328] bg-[#C86328]/5'
-                      }`}>
+                    <div className="flex items-center space-x-2.5">
+                      <span
+                        className={`text-[11px] px-2.5 py-0.5 rounded-lg font-bold border ${
+                          item.type === '杭州麻将'
+                            ? 'border-[#0E5C4E] text-[#0E5C4E] bg-white'
+                            : 'border-[#C86328] text-[#C86328] bg-white'
+                        }`}
+                      >
                         {item.type}
                       </span>
-                      <span className="text-xs text-[#8C857B]">
+                      <span className="text-xs text-[#8C857B] font-medium">
                         {item.date}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs font-bold text-[#8C857B]">
-                        共 {item.totalRounds} 局
+                      <span className="text-xs font-bold text-[#C86328]">
+                        {item.totalRounds}局
                       </span>
                       <button
                         onClick={(e) => handleDeleteHistory(item.id, e)}
-                        className="text-[#B0A89C] hover:text-[#DC2626] transition-colors p-1"
+                        className="text-[#D5CDC2] hover:text-[#DC2626] transition-colors p-0.5"
                         title="删除此战绩"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -713,50 +778,81 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center mt-2.5 text-xs">
-                    <span className="text-[#8C857B]">本场用时</span>
-                    <span className="font-semibold text-[#2C3531]">{item.duration}</span>
-                  </div>
+                  {/* 分割线 */}
+                  <div className="border-t border-[#F5EFE6] my-3"></div>
 
-                  <div className="border-t border-[#F5EFE6] my-2.5"></div>
-
-                  <div className="space-y-2">
-                    {item.players.map((p, idx) => {
-                      const avatarIdx = p.avatarIndex ?? (idx % PLAYER_AVATARS.length);
-                      return (
-                        <div key={idx} className="flex justify-between items-center text-xs">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-[#E8DFC8] bg-white shadow-2xs">
-                              {PLAYER_AVATARS[avatarIdx]}
-                            </div>
-                            <span className="text-[#3A4440] font-medium">
-                              {p.seat ? `${p.seat} · ` : ''}{p.name}
-                            </span>
-                          </div>
-                          <span className={`font-bold text-sm ${
-                            p.score > 0 ? 'text-[#DC2626]' : p.score < 0 ? 'text-[#16A34A]' : 'text-[#8C857B]'
-                          }`}>
-                            {p.score > 0 ? `+${p.score}` : p.score}
-                          </span>
+                  {/* 4 位玩家横向排布：姓名在上，得分在下，红赢绿输 */}
+                  <div className="grid grid-cols-4 gap-2 text-center py-0.5">
+                    {item.players.map((p, idx) => (
+                      <div key={idx} className="truncate">
+                        <div className="text-xs text-[#8C857B] font-medium truncate">
+                          {p.name}
                         </div>
-                      );
-                    })}
+                        <div
+                          className={`text-sm font-extrabold mt-1.5 ${
+                            p.score > 0
+                              ? 'text-[#DC2626]'
+                              : p.score < 0
+                              ? 'text-[#16A34A]'
+                              : 'text-[#2C3531]'
+                          }`}
+                        >
+                          {p.score > 0 ? `+${p.score}` : p.score}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
 
-              {!activeGame && historyList.length === 0 && (
-                <div className="bg-white/70 rounded-2xl p-8 text-center border border-dashed border-[#E5DCD0]">
+              {/* 空状态 */}
+              {!activeGame && filteredHistory.length === 0 && (
+                <div className="bg-white/70 rounded-2xl p-8 text-center border border-dashed border-[#E5DCD0] my-4">
                   <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-[#FAF0E6] flex items-center justify-center text-[#C86328]">
                     <Calendar className="w-6 h-6 stroke-[1.8]" />
                   </div>
-                  <p className="text-sm font-bold text-[#5A5248]">暂无对局历史</p>
+                  <p className="text-sm font-bold text-[#5A5248]">暂无该条件的对局记录</p>
                   <p className="text-xs text-[#A0988C] mt-1">
-                    完成牌局并结算后，将自动归档到这里
+                    切换筛选条件或开启新牌局体验记分
                   </p>
                 </div>
               )}
             </div>
+
+            {/* 月份筛选弹窗 */}
+            {showMonthPicker && (
+              <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6">
+                <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF]">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-sm font-bold text-[#0E5C4E]">按月份筛选对局</h3>
+                    <button
+                      onClick={() => setShowMonthPicker(false)}
+                      className="text-[#8C857B] hover:text-[#2C3531] text-xs font-medium"
+                    >
+                      关闭
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                    {availableMonths.map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          setSelectedMonth(m);
+                          setShowMonthPicker(false);
+                        }}
+                        className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold text-left transition-all ${
+                          selectedMonth === m
+                            ? 'bg-[#0E5C4E] text-white shadow-2xs'
+                            : 'bg-[#FAF7F2] text-[#5A5248] hover:bg-[#EFE8DD]'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* 【统计】占位页面 */
