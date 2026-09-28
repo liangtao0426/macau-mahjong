@@ -624,7 +624,7 @@ export default function App() {
                       </div>
                       <div>
                         <h3 className="text-base font-bold text-[#2C3531]">杭州麻将</h3>
-                        <p className="text-xs text-[#8C857B] mt-0.5">三摊承包，飞子爆头，刺激多变</p>
+                        <p className="text-xs text-[#8C857B] mt-0.5">三摊承包，有财必敲，刺激多变</p>
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-[#B0A89C] shrink-0" />
@@ -643,7 +643,7 @@ export default function App() {
                       </div>
                       <div>
                         <h3 className="text-base font-bold text-[#2C3531]">诸暨麻将</h3>
-                        <p className="text-xs text-[#8C857B] mt-0.5">双百带碰，半合全清，本地原味</p>
+                        <p className="text-xs text-[#8C857B] mt-0.5">翻财神，起手两台，小心点炮</p>
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-[#B0A89C] shrink-0" />
