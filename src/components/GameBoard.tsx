@@ -29,6 +29,8 @@ export interface GameData {
   endTime?: number;
 }
 
+type PlayerScoreInput = { sign: '+' | '-'; score: string };
+
 interface GameBoardProps {
   game: GameData;
   onBack: () => void;
@@ -43,7 +45,7 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
   const [showEndConfirmModal, setShowEndConfirmModal] = useState(false);
 
   // 4位玩家的本轮自定义分值输入（正负号 + 分值数值）
-  const [playerRoundScores, setPlayerRoundScores] = useState<Record<string, { sign: '+' | '-'; score: string }>>({});
+  const [playerRoundScores, setPlayerRoundScores] = useState<Record<string, PlayerScoreInput>>({});
 
   // 计算每位玩家的总累计得分
   const cumulativeScores = useMemo(() => {
@@ -66,25 +68,89 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
 
   // 打开记分弹窗并初始化状态
   const handleOpenRecordModal = () => {
-    const initial: Record<string, { sign: '+' | '-'; score: string }> = {};
+    const initial: Record<string, PlayerScoreInput> = {};
     game.players.forEach((p) => {
       initial[p.name] = { sign: '+', score: '' };
     });
     setPlayerRoundScores(initial);
+    setAutoFilledPlayerName(null);
     setShowRecordModal(true);
+  };
+
+  // 记录当前哪位玩家的分值是由系统自动补齐的
+  const [autoFilledPlayerName, setAutoFilledPlayerName] = useState<string | null>(null);
+
+  // 核心智能补齐函数：根据前3位玩家输入，自动计算并填充第4位玩家分值
+  const applyAutoFill = (
+    baseMap: Record<string, PlayerScoreInput>,
+    currentAutoName: string | null,
+    manualEditPlayerName: string
+  ): Record<string, PlayerScoreInput> => {
+    const nextMap: Record<string, PlayerScoreInput> = { ...baseMap };
+
+    // 如果用户手动修改了原本被自动补齐的玩家，则取消其自动补齐状态
+    let autoTarget = currentAutoName === manualEditPlayerName ? null : currentAutoName;
+
+    // 统计当前除 autoTarget 之外已填写有效分值的玩家
+    const manualFilled = game.players.filter((p) => {
+      if (autoTarget && p.name === autoTarget) return false;
+      const item = nextMap[p.name];
+      return item && item.score !== '';
+    });
+
+    // 当且仅当有 3 位玩家已手动输入分值时，自动计算补齐第 4 位
+    if (manualFilled.length === 3) {
+      const targetPlayer = game.players.find((p) => {
+        if (autoTarget) return p.name === autoTarget;
+        const item = nextMap[p.name];
+        return !item || item.score === '';
+      });
+
+      if (targetPlayer) {
+        // 计算前3位玩家的净得分总和
+        let sum = 0;
+        manualFilled.forEach((p) => {
+          const item = nextMap[p.name];
+          const val = Math.abs(Number(item.score)) || 0;
+          sum += (item.sign === '-' ? -1 : 1) * val;
+        });
+
+        // 为保证得失平衡（总和为0），第4位玩家净得分应为 -sum
+        const needed = -sum;
+        nextMap[targetPlayer.name] = {
+          sign: needed >= 0 ? '+' : '-',
+          score: String(Math.abs(needed)),
+        };
+        setAutoFilledPlayerName(targetPlayer.name);
+        return nextMap;
+      }
+    } else {
+      // 若手动填写的玩家不足3位，且之前存在自动补齐的玩家，则重置补齐项
+      if (autoTarget) {
+        nextMap[autoTarget] = {
+          ...nextMap[autoTarget],
+          score: '',
+        };
+        setAutoFilledPlayerName(null);
+      }
+    }
+
+    return nextMap;
   };
 
   // 切换某位玩家的正负号
   const handleToggleSign = (playerName: string) => {
     setPlayerRoundScores((prev) => {
-      const current = prev[playerName] || { sign: '+', score: '' };
-      return {
+      const current: PlayerScoreInput = prev[playerName] || { sign: '+', score: '' };
+      const nextSign: '+' | '-' = current.sign === '+' ? '-' : '+';
+      const updated: Record<string, PlayerScoreInput> = {
         ...prev,
         [playerName]: {
           ...current,
-          sign: current.sign === '+' ? '-' : '+',
+          sign: nextSign,
         },
       };
+      return applyAutoFill(updated, autoFilledPlayerName, playerName);
     });
   };
 
@@ -96,14 +162,15 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
     const formatted = sanitized.replace(/^0+(?=\d)/, '');
 
     setPlayerRoundScores((prev) => {
-      const current = prev[playerName] || { sign: '+', score: '' };
-      return {
+      const current: PlayerScoreInput = prev[playerName] || { sign: '+', score: '' };
+      const updated: Record<string, PlayerScoreInput> = {
         ...prev,
         [playerName]: {
           ...current,
           score: formatted,
         },
       };
+      return applyAutoFill(updated, autoFilledPlayerName, playerName);
     });
   };
 
@@ -400,8 +467,15 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                         {PLAYER_AVATARS[idx % PLAYER_AVATARS.length]}
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-[#2C3531]">
-                          {p.name}
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-sm font-bold text-[#2C3531]">
+                            {p.name}
+                          </span>
+                          {autoFilledPlayerName === p.name && (
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-semibold border border-emerald-200 animate-in fade-in">
+                              自动计算
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-[#8C857B] font-medium">
                           座位 {p.seat}
