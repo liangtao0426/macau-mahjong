@@ -107,6 +107,35 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
     });
   };
 
+  // 计算当前输入弹窗中4位玩家的得失平衡状态
+  const { totalGain, totalLoss, isBalanced, hasInput } = useMemo(() => {
+    let gain = 0;
+    let loss = 0;
+    let hasAny = false;
+
+    game.players.forEach((p) => {
+      const item = playerRoundScores[p.name];
+      if (item && item.score) {
+        const val = Math.abs(Number(item.score)) || 0;
+        if (val > 0) {
+          hasAny = true;
+          if (item.sign === '+') {
+            gain += val;
+          } else {
+            loss += val;
+          }
+        }
+      }
+    });
+
+    return {
+      totalGain: gain,
+      totalLoss: loss,
+      isBalanced: hasAny && gain === loss,
+      hasInput: hasAny,
+    };
+  }, [game.players, playerRoundScores]);
+
   // 提交记录新一轮
   const handleSaveRound = () => {
     // 解析4位玩家的具体得失分
@@ -124,6 +153,20 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
     const hasAnyScore = parsedScores.some((p) => p.score !== 0);
     if (!hasAnyScore) {
       alert('请至少输入一位玩家的得分');
+      return;
+    }
+
+    // 核心校验：得失分必须相等（赢分总计等于输分总计）
+    let roundGain = 0;
+    let roundLoss = 0;
+    parsedScores.forEach((p) => {
+      if (p.score > 0) roundGain += p.score;
+      if (p.score < 0) roundLoss += Math.abs(p.score);
+    });
+
+    if (roundGain !== roundLoss) {
+      const diff = Math.abs(roundGain - roundLoss);
+      alert(`得失分必须相等！\n当前赢分合计：+${roundGain}\n当前输分合计：-${roundLoss}\n相差：${diff} 分，请调整平准后再保存。`);
       return;
     }
 
@@ -405,6 +448,33 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                   </div>
                 );
               })}
+            </div>
+
+            {/* 实时得失平衡校验看板 */}
+            <div className={`mb-3.5 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs font-bold transition-all border ${
+              !hasInput
+                ? 'bg-[#FAF0E6]/70 border-[#F2D7C4] text-[#8C857B]'
+                : isBalanced
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-rose-50 border-rose-200 text-rose-700'
+            }`}>
+              <div className="flex items-center space-x-1.5">
+                <span className={`w-2 h-2 rounded-full ${
+                  !hasInput ? 'bg-[#C86328]' : isBalanced ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'
+                }`} />
+                <span>
+                  {!hasInput
+                    ? '请输入得失分（得失须相等）'
+                    : isBalanced
+                    ? '✓ 得失平衡，可正常保存'
+                    : `得失不相等（相差 ${Math.abs(totalGain - totalLoss)} 分）`}
+                </span>
+              </div>
+              <div className="text-[11px] font-mono">
+                <span className="text-emerald-600 font-extrabold">+{totalGain}</span>
+                <span className="mx-1 text-[#A0988C]">/</span>
+                <span className="text-rose-600 font-extrabold">-{totalLoss}</span>
+              </div>
             </div>
 
             {/* 确认保存按钮 (置于pb-12内且z-[80]，完全高于底部Tab，绝不遮挡) */}
