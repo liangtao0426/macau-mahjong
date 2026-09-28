@@ -9,7 +9,8 @@ import {
   TrendingUp,
   AlertCircle,
   Clock,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 import CreateGame from './components/CreateGame';
 import GameBoard, { GameData, RoundRecord } from './components/GameBoard';
@@ -18,6 +19,17 @@ import { PLAYER_AVATARS } from './components/Avatars';
 // 本地存储持久化 Key
 const STORAGE_ACTIVE_GAME = 'mahjong_active_game';
 const STORAGE_HISTORY_GAMES = 'mahjong_history_records';
+
+// 历史对局年份从 2026 年开始，仅包含 2026 年及以后的年份
+const START_YEAR = 2026;
+const currentSystemYear = new Date().getFullYear();
+const END_YEAR = Math.max(2031, currentSystemYear + 1);
+const AVAILABLE_YEARS = Array.from(
+  { length: END_YEAR - START_YEAR + 1 },
+  (_, i) => START_YEAR + i
+);
+// 月份固定为 12 个月
+const FIXED_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 // 历史对局数据结构
 interface PlayerScore {
@@ -35,7 +47,26 @@ interface MatchRecord {
   duration: string;
   players: PlayerScore[];
   rounds?: RoundRecord[];
+  timestamp?: number;
 }
+
+// 获取历史记录的年份与月份
+const getRecordYearMonth = (item: MatchRecord): { year: number; month: number } => {
+  if (item.timestamp) {
+    const d = new Date(item.timestamp);
+    return { year: d.getFullYear(), month: d.getMonth() + 1 };
+  }
+  if (item.id && item.id.startsWith('game_')) {
+    const ts = parseInt(item.id.replace('game_', ''), 10);
+    if (!isNaN(ts) && ts > 0) {
+      const d = new Date(ts);
+      return { year: d.getFullYear(), month: d.getMonth() + 1 };
+    }
+  }
+  const match = item.date.match(/(\d{1,2})月/);
+  const m = match ? parseInt(match[1], 10) : new Date().getMonth() + 1;
+  return { year: START_YEAR, month: m };
+};
 
 // 格式化时间与日期展示（如：03月05日 14:22）
 const formatGameDate = (timestamp?: number) => {
@@ -100,47 +131,55 @@ export default function App() {
 
   // 历史牌局筛选：玩法筛选（全部 / 杭州 / 诸暨）
   const [historyRuleFilter, setHistoryRuleFilter] = useState<'全部' | '杭州' | '诸暨'>('全部');
-  // 历史牌局筛选：月份筛选（默认 2026年3月）
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026年3月');
+  // 历史牌局筛选：年份与月份（年份从2026年起，月份固定1~12月，默认当前年月）
+  const [selectedYear, setSelectedYear] = useState<number>(() => Math.max(START_YEAR, new Date().getFullYear()));
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
-  // 可供筛选的月份列表
-  const availableMonths = useMemo(() => {
-    const set = new Set<string>();
-    set.add('2026年3月');
-    set.add('2026年2月');
-    const now = new Date();
-    const currentYM = `${now.getFullYear()}年${String(now.getMonth() + 1).padStart(2, '0')}月`;
-    set.add(currentYM);
-    historyList.forEach((h) => {
-      const match = h.date.match(/(\d{2})月/);
-      if (match) {
-        set.add(`2026年${parseInt(match[1], 10)}月`);
-      }
-    });
-    return ['全部月份', ...Array.from(set)];
-  }, [historyList]);
+  // 弹窗内部暂存的年月选中状态
+  const [pickerYear, setPickerYear] = useState<number>(selectedYear);
+  const [pickerMonth, setPickerMonth] = useState<number>(selectedMonth);
 
-  // 根据当前玩法与月份过滤出的历史对局
+  // 每次进入历史页面时：默认选择“全部”玩法和“当前月份”
+  useEffect(() => {
+    if (activeTab === 'history') {
+      setHistoryRuleFilter('全部');
+      const now = new Date();
+      setSelectedYear(Math.max(START_YEAR, now.getFullYear()));
+      setSelectedMonth(now.getMonth() + 1);
+    }
+  }, [activeTab]);
+
+  // 根据当前玩法与年月过滤出的历史对局
   const filteredHistory = useMemo(() => {
     return historyList.filter((item) => {
       // 玩法筛选：全部 / 杭州 / 诸暨
       if (historyRuleFilter === '杭州' && item.type !== '杭州麻将') return false;
       if (historyRuleFilter === '诸暨' && item.type !== '诸暨麻将') return false;
 
-      // 月份筛选
-      if (selectedMonth !== '全部月份') {
-        const match = selectedMonth.match(/(\d+)月/);
-        if (match) {
-          const monthNum = match[1].padStart(2, '0');
-          if (!item.date.includes(`${monthNum}月`)) {
-            return false;
-          }
-        }
+      // 年月筛选
+      const { year, month } = getRecordYearMonth(item);
+      if (year !== selectedYear || month !== selectedMonth) {
+        return false;
       }
       return true;
     });
-  }, [historyList, historyRuleFilter, selectedMonth]);
+  }, [historyList, historyRuleFilter, selectedYear, selectedMonth]);
+
+  // 进行中对局是否符合当前历史页的玩法与年月筛选
+  const isActiveGameMatching = useMemo(() => {
+    if (!activeGame) return false;
+    if (historyRuleFilter === '杭州' && activeGame.rule !== '杭州麻将') return false;
+    if (historyRuleFilter === '诸暨' && activeGame.rule !== '诸暨麻将') return false;
+
+    const gameDate = activeGame.startTime ? new Date(activeGame.startTime) : new Date();
+    const gameYear = gameDate.getFullYear();
+    const gameMonth = gameDate.getMonth() + 1;
+    if (gameYear !== selectedYear || gameMonth !== selectedMonth) {
+      return false;
+    }
+    return true;
+  }, [activeGame, historyRuleFilter, selectedYear, selectedMonth]);
 
   // 控制历史页面中各对局卡片每轮明细的展开/折叠状态（默认展开）
   const [collapsedHistoryCardIds, setCollapsedHistoryCardIds] = useState<Record<string, boolean>>({});
@@ -245,6 +284,7 @@ export default function App() {
         avatarIndex: idx % PLAYER_AVATARS.length,
       })),
       rounds: activeGame.rounds,
+      timestamp: activeGame.startTime || Date.now(),
     };
 
     // 保存到历史列表头部
@@ -656,14 +696,18 @@ export default function App() {
               </div>
             </div>
 
-            {/* 筛选栏：左侧月份选择器，右侧全部/杭州/诸暨玩法筛选 */}
+            {/* 筛选栏：左侧年月选择器，右侧全部/杭州/诸暨玩法筛选 */}
             <div className="px-5 mb-4 flex justify-between items-center">
-              {/* 左侧月份胶囊 */}
+              {/* 左侧年月选择胶囊 */}
               <button
-                onClick={() => setShowMonthPicker(true)}
+                onClick={() => {
+                  setPickerYear(selectedYear);
+                  setPickerMonth(selectedMonth);
+                  setShowMonthPicker(true);
+                }}
                 className="bg-[#EDF5F3] text-[#0E5C4E] px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center shadow-2xs hover:bg-[#DFECE9] active:scale-95 transition-all"
               >
-                <span>{selectedMonth}</span>
+                <span>{selectedYear}年{selectedMonth}月</span>
                 <Calendar className="w-3.5 h-3.5 ml-1.5 text-[#0E5C4E]" />
               </button>
 
@@ -690,10 +734,8 @@ export default function App() {
 
             {/* 对局卡片列表 */}
             <div className="px-5 space-y-3.5 flex-1">
-              {/* 正在进行中的牌局（如果符合当前玩法筛选） */}
-              {activeGame &&
-                (historyRuleFilter === '全部' ||
-                  historyRuleFilter === (activeGame.rule === '杭州麻将' ? '杭州' : '诸暨')) && (
+              {/* 正在进行中的牌局（如果符合当前玩法与年月筛选） */}
+              {isActiveGameMatching && activeGame && (
                   <div
                     onClick={() => {
                       setScoreSubView('board');
@@ -969,7 +1011,7 @@ export default function App() {
               ))}
 
               {/* 空状态 */}
-              {!activeGame && filteredHistory.length === 0 && (
+              {!isActiveGameMatching && filteredHistory.length === 0 && (
                 <div className="bg-white/70 rounded-2xl p-8 text-center border border-dashed border-[#E5DCD0] my-4">
                   <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-[#FAF0E6] flex items-center justify-center text-[#C86328]">
                     <Calendar className="w-6 h-6 stroke-[1.8]" />
@@ -982,36 +1024,106 @@ export default function App() {
               )}
             </div>
 
-            {/* 月份筛选弹窗 */}
+            {/* 年月筛选弹窗：年份与月份分开选择 */}
             {showMonthPicker && (
-              <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6">
+              <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-5">
                 <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF]">
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-sm font-bold text-[#0E5C4E]">按月份筛选对局</h3>
+                  {/* 弹窗头部 */}
+                  <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-[#F5EFE6]">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#0E5C4E]">按年月筛选对局</h3>
+                      <p className="text-[11px] text-[#8C857B] mt-0.5">选择查看特定月份的历史对局</p>
+                    </div>
                     <button
                       onClick={() => setShowMonthPicker(false)}
-                      className="text-[#8C857B] hover:text-[#2C3531] text-xs font-medium"
+                      className="p-1 rounded-full text-[#8C857B] hover:text-[#2C3531] hover:bg-[#FAF7F2] transition-colors"
                     >
-                      关闭
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                    {availableMonths.map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => {
-                          setSelectedMonth(m);
-                          setShowMonthPicker(false);
-                        }}
-                        className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold text-left transition-all ${
-                          selectedMonth === m
-                            ? 'bg-[#0E5C4E] text-white shadow-2xs'
-                            : 'bg-[#FAF7F2] text-[#5A5248] hover:bg-[#EFE8DD]'
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
+
+                  {/* 1. 年份选择区（仅展示2026年及以后的年份） */}
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-bold text-[#5A5248]">年份（26年及以后）</span>
+                      <span className="text-[11px] text-[#0E5C4E] font-bold">{pickerYear}年</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {AVAILABLE_YEARS.map((y) => (
+                        <button
+                          key={y}
+                          type="button"
+                          onClick={() => setPickerYear(y)}
+                          className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                            pickerYear === y
+                              ? 'bg-[#0E5C4E] text-white shadow-2xs scale-[1.02]'
+                              : 'bg-[#FAF7F2] text-[#5A5248] hover:bg-[#EFE8DD]'
+                          }`}
+                        >
+                          {y}年
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 2. 月份选择区（固定12个月） */}
+                  <div className="mb-5">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-bold text-[#5A5248]">月份</span>
+                      <span className="text-[11px] text-[#0E5C4E] font-bold">{pickerMonth}月</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {FIXED_MONTHS.map((m) => {
+                        const isSelected = pickerMonth === m;
+                        const now = new Date();
+                        const isCurrentMonth = now.getFullYear() === pickerYear && (now.getMonth() + 1) === m;
+                        return (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setPickerMonth(m)}
+                            className={`py-2.5 rounded-xl text-xs font-bold transition-all relative ${
+                              isSelected
+                                ? 'bg-[#0E5C4E] text-white shadow-2xs scale-[1.02]'
+                                : 'bg-[#FAF7F2] text-[#5A5248] hover:bg-[#EFE8DD]'
+                            }`}
+                          >
+                            <span>{m}月</span>
+                            {isCurrentMonth && (
+                              <span className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${
+                                isSelected ? 'bg-amber-300' : 'bg-[#C86328]'
+                              }`} title="当前月" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 底部按钮栏 */}
+                  <div className="flex space-x-2 pt-2 border-t border-[#F5EFE6]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date();
+                        setPickerYear(Math.max(START_YEAR, now.getFullYear()));
+                        setPickerMonth(now.getMonth() + 1);
+                      }}
+                      className="py-2.5 px-3.5 rounded-xl text-xs font-bold text-[#0E5C4E] bg-[#EDF5F3] hover:bg-[#DFECE9] transition-all shrink-0"
+                    >
+                      当前月
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedYear(pickerYear);
+                        setSelectedMonth(pickerMonth);
+                        setShowMonthPicker(false);
+                      }}
+                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0E5C4E] hover:bg-[#0A473C] transition-all shadow-xs active:scale-[0.98]"
+                    >
+                      确定 ({pickerYear}年{pickerMonth}月)
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1064,7 +1176,13 @@ export default function App() {
 
           {/* Tab 3: 历史 */}
           <button 
-            onClick={() => setActiveTab('history')}
+            onClick={() => {
+              setHistoryRuleFilter('全部');
+              const now = new Date();
+              setSelectedYear(Math.max(START_YEAR, now.getFullYear()));
+              setSelectedMonth(now.getMonth() + 1);
+              setActiveTab('history');
+            }}
             className="flex flex-col items-center justify-center space-y-1 text-xs"
           >
             <div className={`p-1 rounded-full ${activeTab === 'history' ? 'bg-[#EBF4F2] text-[#0E5C4E]' : 'text-[#8C857B]'}`}>
