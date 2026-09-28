@@ -8,6 +8,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import CreateGame from './components/CreateGame';
+import GameBoard, { GameData, RoundRecord } from './components/GameBoard';
 
 // 历史对局数据结构
 interface PlayerScore {
@@ -66,8 +67,86 @@ const mockHistoryData: MatchRecord[] = [
   },
 ];
 
+// 默认示例对局数据（完全对齐设计图）
+const defaultDemoGame: GameData = {
+  id: 'game_demo',
+  name: '牌局 A',
+  rule: '杭州麻将',
+  status: '进行中',
+  players: [
+    { seat: '东', name: '阿强' },
+    { seat: '南', name: '小美' },
+    { seat: '西', name: '老陈' },
+    { seat: '北', name: '我' },
+  ],
+  rounds: [
+    {
+      roundNumber: 1,
+      winnerName: '我',
+      winScore: 48,
+      playerScores: [
+        { seat: '东', name: '阿强', score: -48 },
+        { seat: '南', name: '小美', score: 0 },
+        { seat: '西', name: '老陈', score: 0 },
+        { seat: '北', name: '我', score: 48 },
+      ],
+    },
+    {
+      roundNumber: 2,
+      winnerName: '阿强',
+      winScore: 36,
+      playerScores: [
+        { seat: '东', name: '阿强', score: 72 },
+        { seat: '南', name: '小美', score: -24 },
+        { seat: '西', name: '老陈', score: -24 },
+        { seat: '北', name: '我', score: -24 },
+      ],
+    },
+    {
+      roundNumber: 3,
+      winnerName: '小美',
+      winScore: 24,
+      playerScores: [
+        { seat: '东', name: '阿强', score: 60 },
+        { seat: '南', name: '小美', score: 12 },
+        { seat: '西', name: '老陈', score: -24 },
+        { seat: '北', name: '我', score: -48 },
+      ],
+    },
+  ],
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'score' | 'history' | 'stats'>('home');
+  // 记分板块内部子页面：'create' 为新建牌局，'board' 为对局记分盘
+  const [scoreSubView, setScoreSubView] = useState<'create' | 'board'>('create');
+  // 当前正在进行的对局（默认带有示例对局，也可新建）
+  const [currentGame, setCurrentGame] = useState<GameData>(defaultDemoGame);
+
+  // 开启新牌局回调
+  const handleStartNewGame = (config: {
+    rule: '杭州麻将' | '诸暨麻将';
+    players: { seat: string; name: string }[];
+  }) => {
+    const newGame: GameData = {
+      id: `game_${Date.now()}`,
+      name: '牌局 A',
+      rule: config.rule,
+      status: '进行中',
+      players: config.players,
+      rounds: [], // 全新牌局从第 1 轮开始
+    };
+    setCurrentGame(newGame);
+    setScoreSubView('board');
+  };
+
+  // 添加一轮记分
+  const handleAddRound = (newRound: RoundRecord) => {
+    setCurrentGame((prev) => ({
+      ...prev,
+      rounds: [...prev.rounds, newRound],
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-[#F8F3EB] flex justify-center selection:bg-[#0E5C4E]/20">
@@ -76,13 +155,19 @@ export default function App() {
         
         {/* 根据当前 Tab 切换主视图 */}
         {activeTab === 'score' ? (
-          /* 【记分 / 新建牌局】视图 */
-          <CreateGame 
-            onBack={() => setActiveTab('home')}
-            onStartGame={(config) => {
-              alert(`开启新牌局成功！\n规则：${config.rule}\n东南西北：${config.players.map(p => `${p.seat}:${p.name}`).join('、')}`);
-            }}
-          />
+          /* 【记分】板块：根据子视图显示【新建牌局】或【对局记分盘】 */
+          scoreSubView === 'board' ? (
+            <GameBoard
+              game={currentGame}
+              onBack={() => setScoreSubView('create')}
+              onAddRound={handleAddRound}
+            />
+          ) : (
+            <CreateGame 
+              onBack={() => setActiveTab('home')}
+              onStartGame={handleStartNewGame}
+            />
+          )
         ) : activeTab === 'home' ? (
           /* 【首页】视图 */
           <>
@@ -117,7 +202,10 @@ export default function App() {
                 <div className="space-y-3">
                   {/* 卡片1：杭州麻将 */}
                   <div 
-                    onClick={() => setActiveTab('score')}
+                    onClick={() => {
+                      setScoreSubView('create');
+                      setActiveTab('score');
+                    }}
                     className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-[#F0EADF] flex items-center justify-between transition-transform active:scale-[0.99] cursor-pointer hover:border-[#0E5C4E]/30"
                   >
                     <div className="flex items-center space-x-3.5">
@@ -134,7 +222,10 @@ export default function App() {
 
                   {/* 卡片2：诸暨麻将 */}
                   <div 
-                    onClick={() => setActiveTab('score')}
+                    onClick={() => {
+                      setScoreSubView('create');
+                      setActiveTab('score');
+                    }}
                     className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-[#F0EADF] flex items-center justify-between transition-transform active:scale-[0.99] cursor-pointer hover:border-[#C86328]/30"
                   >
                     <div className="flex items-center space-x-3.5">
@@ -182,7 +273,11 @@ export default function App() {
                   {mockHistoryData.map((item) => (
                     <div 
                       key={item.id} 
-                      className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-[#F0EADF]"
+                      onClick={() => {
+                        setScoreSubView('board');
+                        setActiveTab('score');
+                      }}
+                      className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-[#F0EADF] cursor-pointer hover:border-[#0E5C4E]/20 transition-all active:scale-[0.99]"
                     >
                       {/* 第一行：玩法标签 + 时间 + 共N局 */}
                       <div className="flex justify-between items-center">
@@ -235,7 +330,10 @@ export default function App() {
             {/* 页面底部居中大按钮 */}
             <div className="sticky bottom-16 left-0 right-0 px-5 pt-2 pb-3 bg-gradient-to-t from-[#F8F3EB] via-[#F8F3EB]/90 to-transparent z-40">
               <button 
-                onClick={() => setActiveTab('score')}
+                onClick={() => {
+                  setScoreSubView('create');
+                  setActiveTab('score');
+                }}
                 className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center space-x-2 active:scale-[0.98] transition-all hover:bg-[#0A473C]"
               >
                 <Plus className="w-5 h-5 stroke-[2.5]" />
@@ -270,7 +368,9 @@ export default function App() {
 
           {/* Tab 2: 记分 */}
           <button 
-            onClick={() => setActiveTab('score')}
+            onClick={() => {
+              setActiveTab('score');
+            }}
             className="flex flex-col items-center justify-center space-y-1 text-xs"
           >
             <div className={`p-1 rounded-full ${activeTab === 'score' ? 'bg-[#EBF4F2] text-[#0E5C4E]' : 'text-[#8C857B]'}`}>
