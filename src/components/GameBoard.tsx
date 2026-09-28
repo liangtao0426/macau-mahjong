@@ -88,15 +88,20 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
     });
   };
 
-  // 修改某位玩家的输入分值
+  // 修改某位玩家的输入分值（严格限制为纯整数，禁止小数点及非数字字符）
   const handleScoreChange = (playerName: string, val: string) => {
+    // 移除非数字字符（阻止输入小数点、负号、英文字母等）
+    const sanitized = val.replace(/\D/g, '');
+    // 处理多余前导零（例如 '08' -> '8'）
+    const formatted = sanitized.replace(/^0+(?=\d)/, '');
+
     setPlayerRoundScores((prev) => {
       const current = prev[playerName] || { sign: '+', score: '' };
       return {
         ...prev,
         [playerName]: {
           ...current,
-          score: val,
+          score: formatted,
         },
       };
     });
@@ -376,11 +381,18 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                         {item.sign}
                       </button>
                       <input
-                        type="number"
+                        type="text"
                         inputMode="numeric"
+                        pattern="[0-9]*"
                         placeholder="0"
                         value={item.score}
                         onChange={(e) => handleScoreChange(p.name, e.target.value)}
+                        onKeyDown={(e) => {
+                          // 拦截小数点、科学计数法e以及负号等非整数按键
+                          if (['.', ',', 'e', 'E', '-', '+'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
                         className={`w-24 bg-[#FAF7F2] border border-[#E8E0D2] rounded-xl px-3 py-2 text-center text-base font-extrabold outline-none focus:border-[#0E5C4E] focus:bg-white transition-all ${
                           item.score && isPositive
                             ? 'text-emerald-600'
