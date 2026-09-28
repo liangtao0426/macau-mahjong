@@ -42,11 +42,8 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
   // 控制结束对局确认弹窗显隐
   const [showEndConfirmModal, setShowEndConfirmModal] = useState(false);
 
-  // 记分表单状态
-  const [selectedWinner, setSelectedWinner] = useState<string>(game.players[0]?.name || '');
-  const [winType, setWinType] = useState<'自摸' | '点炮'>('自摸');
-  const [selectedDiscarder, setSelectedDiscarder] = useState<string>(game.players[1]?.name || '');
-  const [winScoreInput, setWinScoreInput] = useState<number>(36);
+  // 4位玩家的本轮自定义分值输入（正负号 + 分值数值）
+  const [playerRoundScores, setPlayerRoundScores] = useState<Record<string, { sign: '+' | '-'; score: string }>>({});
 
   // 计算每位玩家的总累计得分
   const cumulativeScores = useMemo(() => {
@@ -67,52 +64,79 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
   // 下一轮的编号
   const nextRoundNumber = game.rounds.length + 1;
 
+  // 打开记分弹窗并初始化状态
+  const handleOpenRecordModal = () => {
+    const initial: Record<string, { sign: '+' | '-'; score: string }> = {};
+    game.players.forEach((p) => {
+      initial[p.name] = { sign: '+', score: '' };
+    });
+    setPlayerRoundScores(initial);
+    setShowRecordModal(true);
+  };
+
+  // 切换某位玩家的正负号
+  const handleToggleSign = (playerName: string) => {
+    setPlayerRoundScores((prev) => {
+      const current = prev[playerName] || { sign: '+', score: '' };
+      return {
+        ...prev,
+        [playerName]: {
+          ...current,
+          sign: current.sign === '+' ? '-' : '+',
+        },
+      };
+    });
+  };
+
+  // 修改某位玩家的输入分值
+  const handleScoreChange = (playerName: string, val: string) => {
+    setPlayerRoundScores((prev) => {
+      const current = prev[playerName] || { sign: '+', score: '' };
+      return {
+        ...prev,
+        [playerName]: {
+          ...current,
+          score: val,
+        },
+      };
+    });
+  };
+
   // 提交记录新一轮
   const handleSaveRound = () => {
-    if (!selectedWinner) {
-      alert('请选择胡牌者');
-      return;
-    }
-    if (winType === '点炮' && selectedWinner === selectedDiscarder) {
-      alert('点炮者不能是胡牌者本人');
-      return;
-    }
-
-    const score = Number(winScoreInput) || 0;
-    if (score <= 0) {
-      alert('请输入有效的胡牌分值');
-      return;
-    }
-
-    const playerScores = game.players.map((p) => {
-      if (p.name === selectedWinner) {
-        return {
-          seat: p.seat,
-          name: p.name,
-          score: score,
-        };
-      } else if (winType === '点炮') {
-        return {
-          seat: p.seat,
-          name: p.name,
-          score: p.name === selectedDiscarder ? -score : 0,
-        };
-      } else {
-        // 自摸：其余三家均摊
-        const eachPay = Math.round(score / 3);
-        return {
-          seat: p.seat,
-          name: p.name,
-          score: -eachPay,
-        };
-      }
+    // 解析4位玩家的具体得失分
+    const parsedScores = game.players.map((p) => {
+      const item = playerRoundScores[p.name] || { sign: '+', score: '' };
+      const num = Math.abs(Number(item.score)) || 0;
+      const net = (item.sign === '-' ? -1 : 1) * num;
+      return {
+        seat: p.seat,
+        name: p.name,
+        score: net,
+      };
     });
+
+    const hasAnyScore = parsedScores.some((p) => p.score !== 0);
+    if (!hasAnyScore) {
+      alert('请至少输入一位玩家的得分');
+      return;
+    }
+
+    // 自动判定赢家（分值大于0者为胡牌/赢牌玩家）
+    const winners = parsedScores.filter((p) => p.score > 0);
+    let winnerName = '荒牌 / 平局';
+    let winScore = 0;
+
+    if (winners.length > 0) {
+      winnerName = winners.map((w) => w.name).join('、');
+      winScore = Math.max(...winners.map((w) => w.score));
+    }
 
     const newRound: RoundRecord = {
       roundNumber: nextRoundNumber,
-      winnerName: selectedWinner,
-      winScore: score,
-      playerScores,
+      winnerName,
+      winScore,
+      playerScores: parsedScores,
     };
 
     onAddRound(newRound);
@@ -156,7 +180,7 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
         </div>
       </div>
 
-      {/* 2. 牌局 A · 累计统计大卡片 */}
+      {/* 2. 牌局 A · 累计统计大卡片 (4人平铺带头像展示) */}
       <div className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-[#F0EADF] mb-6">
         {/* 卡片头部 */}
         <div className="flex justify-between items-center mb-3">
@@ -283,151 +307,99 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
       {/* 4. 底部居中操作大按钮 */}
       <div className="fixed bottom-16 left-0 right-0 max-w-md mx-auto px-5 pt-2 pb-3 bg-gradient-to-t from-[#F8F3EB] via-[#F8F3EB]/90 to-transparent z-40">
         <button
-          onClick={() => setShowRecordModal(true)}
+          onClick={handleOpenRecordModal}
           className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center space-x-1.5 active:scale-[0.98] transition-all hover:bg-[#0A473C]"
         >
           <span>记录第 {nextRoundNumber} 轮</span>
         </button>
       </div>
 
-      {/* 5. 记录本轮明细弹窗 (Modal) */}
+      {/* 5. 记录本轮明细弹窗 (Modal) - z-[80]层级且带pb-12，保证不被底部Tab遮挡 */}
       {showRecordModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center transition-opacity">
-          <div className="w-full max-w-md bg-[#FAF7F2] rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-200">
+        <div className="fixed inset-0 bg-black/50 z-[80] flex items-end justify-center transition-opacity">
+          <div className="w-full max-w-md bg-[#FAF7F2] rounded-t-3xl p-6 pb-12 shadow-2xl animate-in slide-in-from-bottom duration-200 max-h-[85vh] overflow-y-auto">
             {/* 弹窗头部 */}
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-lg font-bold text-[#0E5C4E]">
-                记录第 {nextRoundNumber} 轮
-              </h3>
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-[#0E5C4E]">
+                  记录第 {nextRoundNumber} 轮
+                </h3>
+                <p className="text-xs text-[#8C857B] mt-0.5 font-medium">
+                  直接输入每位牌友本轮的自定义得失分
+                </p>
+              </div>
               <button
                 onClick={() => setShowRecordModal(false)}
-                className="w-8 h-8 rounded-full bg-[#EAE2D5] flex items-center justify-center text-[#5A5248]"
+                className="w-8 h-8 rounded-full bg-[#EAE2D5] flex items-center justify-center text-[#5A5248] active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* 表单内容 */}
-            <div className="space-y-4 text-xs">
-              {/* 选择胡牌者 */}
-              <div>
-                <label className="block text-[#5A5248] font-bold mb-2">
-                  胡牌玩家
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {game.players.map((p) => (
-                    <button
-                      key={p.name}
-                      type="button"
-                      onClick={() => setSelectedWinner(p.name)}
-                      className={`py-2 px-1 rounded-xl font-bold transition-all text-center ${
-                        selectedWinner === p.name
-                          ? 'bg-[#0E5C4E] text-white shadow-xs'
-                          : 'bg-white border border-[#E8E0D2] text-[#2C3531]'
-                      }`}
-                    >
-                      <div className="text-[10px] text-[#8C857B] font-normal">{p.seat}</div>
-                      <div className="truncate">{p.name}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 胡牌类型 */}
-              <div>
-                <label className="block text-[#5A5248] font-bold mb-2">
-                  胡牌方式
-                </label>
-                <div className="flex bg-[#EFE8DD] p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setWinType('自摸')}
-                    className={`flex-1 py-2 rounded-lg font-bold transition-all ${
-                      winType === '自摸'
-                        ? 'bg-[#0E5C4E] text-white shadow-xs'
-                        : 'text-[#5A5248]'
-                    }`}
+            {/* 4位牌友列表：直接全部展示，包含对应卡通头像、正负号切换与自定义分值输入 */}
+            <div className="space-y-3 mb-6">
+              {game.players.map((p, idx) => {
+                const item = playerRoundScores[p.name] || { sign: '+', score: '' };
+                const isPositive = item.sign === '+';
+                return (
+                  <div
+                    key={p.name}
+                    className="bg-white rounded-2xl p-3 border border-[#F0EADF] flex items-center justify-between shadow-2xs"
                   >
-                    自摸 (三家付)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWinType('点炮')}
-                    className={`flex-1 py-2 rounded-lg font-bold transition-all ${
-                      winType === '点炮'
-                        ? 'bg-[#0E5C4E] text-white shadow-xs'
-                        : 'text-[#5A5248]'
-                    }`}
-                  >
-                    点炮 (一家付)
-                  </button>
-                </div>
-              </div>
+                    {/* 左侧头像与玩家信息 */}
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-[#E8DFC8] bg-white shadow-2xs">
+                        {PLAYER_AVATARS[idx % PLAYER_AVATARS.length]}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-[#2C3531]">
+                          {p.name}
+                        </div>
+                        <div className="text-[11px] text-[#8C857B] font-medium">
+                          座位 {p.seat}
+                        </div>
+                      </div>
+                    </div>
 
-              {/* 如果是点炮，选择放冲玩家 */}
-              {winType === '点炮' && (
-                <div>
-                  <label className="block text-[#5A5248] font-bold mb-2">
-                    放冲 (点炮) 玩家
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {game.players
-                      .filter((p) => p.name !== selectedWinner)
-                      .map((p) => (
-                        <button
-                          key={p.name}
-                          type="button"
-                          onClick={() => setSelectedDiscarder(p.name)}
-                          className={`py-2 px-1 rounded-xl font-bold transition-all text-center ${
-                            selectedDiscarder === p.name
-                              ? 'bg-[#C86328] text-white shadow-xs'
-                              : 'bg-white border border-[#E8E0D2] text-[#2C3531]'
-                          }`}
-                        >
-                          <div className="truncate">{p.name}</div>
-                        </button>
-                      ))}
+                    {/* 右侧正负切换与自定义分值输入框 */}
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSign(p.name)}
+                        className={`w-9 h-9 rounded-xl font-black text-sm flex items-center justify-center transition-all active:scale-90 select-none shadow-2xs ${
+                          isPositive
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                            : 'bg-rose-100 text-rose-700 border border-rose-300'
+                        }`}
+                        title="点击切换赢(+)或输(-)"
+                      >
+                        {item.sign}
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={item.score}
+                        onChange={(e) => handleScoreChange(p.name, e.target.value)}
+                        className={`w-24 bg-[#FAF7F2] border border-[#E8E0D2] rounded-xl px-3 py-2 text-center text-base font-extrabold outline-none focus:border-[#0E5C4E] focus:bg-white transition-all ${
+                          item.score && isPositive
+                            ? 'text-emerald-600'
+                            : item.score && !isPositive
+                            ? 'text-rose-600'
+                            : 'text-[#2C3531]'
+                        }`}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {/* 胡牌分值快捷选项 */}
-              <div>
-                <label className="block text-[#5A5248] font-bold mb-2">
-                  胡牌分值
-                </label>
-                <div className="grid grid-cols-4 gap-2 mb-2">
-                  {[24, 36, 48, 84].map((score) => (
-                    <button
-                      key={score}
-                      type="button"
-                      onClick={() => setWinScoreInput(score)}
-                      className={`py-2 rounded-xl font-bold transition-all ${
-                        winScoreInput === score
-                          ? 'bg-[#0E5C4E] text-white'
-                          : 'bg-white border border-[#E8E0D2] text-[#2C3531]'
-                      }`}
-                    >
-                      +{score}
-                    </button>
-                  ))}
-                </div>
-                {/* 自定义输入 */}
-                <input
-                  type="number"
-                  value={winScoreInput || ''}
-                  onChange={(e) => setWinScoreInput(Number(e.target.value))}
-                  placeholder="自定义输入分值"
-                  className="w-full bg-white border border-[#E8E0D2] rounded-xl px-3 py-2 text-sm font-bold text-[#2C3531] outline-none focus:border-[#0E5C4E]"
-                />
-              </div>
+                );
+              })}
             </div>
 
-            {/* 确认保存按钮 */}
-            <div className="mt-6">
+            {/* 确认保存按钮 (置于pb-12内且z-[80]，完全高于底部Tab，绝不遮挡) */}
+            <div className="pt-1">
               <button
                 onClick={handleSaveRound}
-                className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-sm rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center active:scale-[0.98] transition-all hover:bg-[#0A473C]"
+                className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center active:scale-[0.98] transition-all hover:bg-[#0A473C]"
               >
                 保存此轮记分
               </button>
@@ -438,7 +410,7 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
 
       {/* 6. 结束对局确认弹窗 */}
       {showEndConfirmModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6">
+        <div className="fixed inset-0 bg-black/50 z-[90] flex items-center justify-center p-6">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF]">
             <h3 className="text-base font-bold text-[#0E5C4E] mb-2 text-center">
               确认结束本场牌局？
