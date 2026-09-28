@@ -326,9 +326,9 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                 <span
                   className={`text-base font-black my-0.5 tracking-tight ${
                     totalScore > 0
-                      ? 'text-[#16A34A]'
-                      : totalScore < 0
                       ? 'text-[#DC2626]'
+                      : totalScore < 0
+                      ? 'text-[#16A34A]'
                       : 'text-[#2C3531]'
                   }`}
                 >
@@ -380,7 +380,7 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                       胡牌者：{round.winnerName}
                     </p>
                   </div>
-                  <span className="bg-[#D1FAE5] text-[#059669] text-xs font-bold px-2.5 py-0.5 rounded-full">
+                  <span className="bg-[#FEE2E2] text-[#DC2626] text-xs font-bold px-2.5 py-0.5 rounded-full">
                     +{round.winScore}
                   </span>
                 </div>
@@ -398,9 +398,9 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                       <span
                         className={`font-bold ${
                           ps.score > 0
-                            ? 'text-[#16A34A]'
-                            : ps.score < 0
                             ? 'text-[#DC2626]'
+                            : ps.score < 0
+                            ? 'text-[#16A34A]'
                             : 'text-[#8C857B]'
                         }`}
                       >
@@ -490,8 +490,8 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                         onClick={() => handleToggleSign(p.name)}
                         className={`w-9 h-9 rounded-xl font-black text-sm flex items-center justify-center transition-all active:scale-90 select-none shadow-2xs ${
                           isPositive
-                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                            : 'bg-rose-100 text-rose-700 border border-rose-300'
+                            ? 'bg-rose-100 text-rose-700 border border-rose-300'
+                            : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                         }`}
                         title="点击切换赢(+)或输(-)"
                       >
@@ -512,9 +512,9 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                         }}
                         className={`w-24 bg-[#FAF7F2] border border-[#E8E0D2] rounded-xl px-3 py-2 text-center text-base font-extrabold outline-none focus:border-[#0E5C4E] focus:bg-white transition-all ${
                           item.score && isPositive
-                            ? 'text-emerald-600'
+                            ? 'text-[#DC2626]'
                             : item.score && !isPositive
-                            ? 'text-rose-600'
+                            ? 'text-[#16A34A]'
                             : 'text-[#2C3531]'
                         }`}
                       />
@@ -545,9 +545,9 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
                 </span>
               </div>
               <div className="text-[11px] font-mono">
-                <span className="text-emerald-600 font-extrabold">+{totalGain}</span>
+                <span className="text-[#DC2626] font-extrabold">+{totalGain}</span>
                 <span className="mx-1 text-[#A0988C]">/</span>
-                <span className="text-rose-600 font-extrabold">-{totalLoss}</span>
+                <span className="text-[#16A34A] font-extrabold">-{totalLoss}</span>
               </div>
             </div>
 

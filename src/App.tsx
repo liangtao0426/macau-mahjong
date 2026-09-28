@@ -311,7 +311,7 @@ export default function App() {
                             {p.name}
                           </div>
                           <div className={`text-base font-extrabold mt-0.5 ${
-                            score > 0 ? 'text-emerald-300' : score < 0 ? 'text-rose-300' : 'text-white/90'
+                            score > 0 ? 'text-rose-300' : score < 0 ? 'text-emerald-300' : 'text-white/90'
                           }`}>
                             {score > 0 ? `+${score}` : score}
                           </div>
@@ -481,7 +481,7 @@ export default function App() {
                                 </span>
                               </div>
                               <span className={`font-bold text-sm ${
-                                score > 0 ? 'text-[#16A34A]' : score < 0 ? 'text-[#DC2626]' : 'text-[#8C857B]'
+                                score > 0 ? 'text-[#DC2626]' : score < 0 ? 'text-[#16A34A]' : 'text-[#8C857B]'
                               }`}>
                                 {score > 0 ? `+${score}` : score}
                               </span>
@@ -541,7 +541,7 @@ export default function App() {
                                 </span>
                               </div>
                               <span className={`font-bold text-sm ${
-                                p.score > 0 ? 'text-[#16A34A]' : p.score < 0 ? 'text-[#DC2626]' : 'text-[#8C857B]'
+                                p.score > 0 ? 'text-[#DC2626]' : p.score < 0 ? 'text-[#16A34A]' : 'text-[#8C857B]'
                               }`}>
                                 {p.score > 0 ? `+${p.score}` : p.score}
                               </span>
@@ -669,7 +669,7 @@ export default function App() {
                             </span>
                           </div>
                           <span className={`font-bold text-sm ${
-                            score > 0 ? 'text-[#16A34A]' : score < 0 ? 'text-[#DC2626]' : 'text-[#8C857B]'
+                            score > 0 ? 'text-[#DC2626]' : score < 0 ? 'text-[#16A34A]' : 'text-[#8C857B]'
                           }`}>
                             {score > 0 ? `+${score}` : score}
                           </span>
@@ -734,7 +734,7 @@ export default function App() {
                             </span>
                           </div>
                           <span className={`font-bold text-sm ${
-                            p.score > 0 ? 'text-[#16A34A]' : p.score < 0 ? 'text-[#DC2626]' : 'text-[#8C857B]'
+                            p.score > 0 ? 'text-[#DC2626]' : p.score < 0 ? 'text-[#16A34A]' : 'text-[#8C857B]'
                           }`}>
                             {p.score > 0 ? `+${p.score}` : p.score}
                           </span>
