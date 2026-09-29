@@ -97,6 +97,30 @@ export default function App() {
   // 记分板块内部子页面：'create' 为新建牌局，'board' 为对局记分盘
   const [scoreSubView, setScoreSubView] = useState<'create' | 'board'>('create');
   
+  // 滚动到页面最顶部辅助函数（同时重置 window 与 body/documentElement，确保全机型内核兼容）
+  const scrollToTop = () => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  };
+
+  // 每次进入首页、记分、历史、统计等页面或切换子视图时，均自动滚动跳转到最顶部开始
+  useEffect(() => {
+    scrollToTop();
+    const rafId = requestAnimationFrame(() => {
+      scrollToTop();
+    });
+    const timerId = setTimeout(() => {
+      scrollToTop();
+    }, 20);
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timerId);
+    };
+  }, [activeTab, scoreSubView]);
+  
   // 当前正在进行的对局（持久化保存在本地）
   const [activeGame, setActiveGame] = useState<GameData | null>(() => {
     try {
@@ -413,6 +437,7 @@ export default function App() {
     setSelectedYear(Math.max(START_YEAR, now.getFullYear()));
     setSelectedMonth(now.getMonth() + 1);
     setActiveTab('history');
+    scrollToTop();
   };
 
   // 首页“最近战绩”最多展示最近3场（若有进行中牌局占1场，则取历史前2场；否则取历史前3场）
@@ -436,6 +461,7 @@ export default function App() {
     } else {
       setScoreSubView('create');
       setActiveTab('score');
+      scrollToTop();
     }
   };
 
@@ -455,6 +481,7 @@ export default function App() {
     };
     setActiveGame(newGame);
     setScoreSubView('board');
+    scrollToTop();
   };
 
   // 添加一轮记分
@@ -506,6 +533,7 @@ export default function App() {
     setActiveGame(null);
     setScoreSubView('create');
     setActiveTab('home');
+    scrollToTop();
   };
 
   // 删除单条历史战绩
@@ -1450,7 +1478,10 @@ export default function App() {
         <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-sm border-t border-[#F0EADF] px-6 pt-2 pb-safe-nav flex justify-around items-center z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
           {/* Tab 1: 首页 */}
           <button 
-            onClick={() => setActiveTab('home')}
+            onClick={() => {
+              setActiveTab('home');
+              scrollToTop();
+            }}
             className="flex flex-col items-center justify-center space-y-1 text-xs"
           >
             <div className={`p-1 rounded-full ${activeTab === 'home' ? 'bg-[#EBF4F2] text-[#0E5C4E]' : 'text-[#8C857B]'}`}>
@@ -1470,6 +1501,7 @@ export default function App() {
                 setScoreSubView('create');
               }
               setActiveTab('score');
+              scrollToTop();
             }}
             className="flex flex-col items-center justify-center space-y-1 text-xs"
           >
@@ -1489,6 +1521,7 @@ export default function App() {
               setSelectedYear(Math.max(START_YEAR, now.getFullYear()));
               setSelectedMonth(now.getMonth() + 1);
               setActiveTab('history');
+              scrollToTop();
             }}
             className="flex flex-col items-center justify-center space-y-1 text-xs"
           >
@@ -1507,6 +1540,7 @@ export default function App() {
               setStatsYear(Math.max(START_YEAR, now.getFullYear()));
               setStatsMonth(now.getMonth() + 1);
               setActiveTab('stats');
+              scrollToTop();
             }}
             className="flex flex-col items-center justify-center space-y-1 text-xs"
           >
