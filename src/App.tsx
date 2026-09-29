@@ -201,15 +201,21 @@ export default function App() {
     }
   };
 
-  // 每次进入历史页面时：默认选择“全部”玩法和“当前月份”
+  // 每次进入历史页面时：默认选择“全部”玩法和“当前月份”，并重置卡片明细展开状态（第一张默认展开，其余收起）
   useEffect(() => {
     if (activeTab === 'history') {
       setHistoryRuleFilter('全部');
       const now = new Date();
       setSelectedYear(Math.max(START_YEAR, now.getFullYear()));
       setSelectedMonth(now.getMonth() + 1);
+      setExpandedHistoryCardIds({});
     }
   }, [activeTab]);
+
+  // 当在历史页面中切换玩法或年月筛选时，重置展开状态使当前筛选结果的第一张卡片默认展开
+  useEffect(() => {
+    setExpandedHistoryCardIds({});
+  }, [historyRuleFilter, selectedYear, selectedMonth]);
 
   // 统计页面筛选：年份与月份（默认当前年份与当前月份）
   const [statsYear, setStatsYear] = useState<number>(() => Math.max(START_YEAR, new Date().getFullYear()));
@@ -354,14 +360,33 @@ export default function App() {
     return true;
   }, [activeGame, historyRuleFilter, selectedYear, selectedMonth]);
 
-  // 控制历史页面中各对局卡片每轮明细的展开/折叠状态（默认展开）
-  const [collapsedHistoryCardIds, setCollapsedHistoryCardIds] = useState<Record<string, boolean>>({});
+  // 计算历史页面第一张卡片的 ID（若有包含轮数明细的进行中对局则优先作为第一张，否则为当前筛选出的第一场历史对局）
+  const firstHistoryCardId = useMemo(() => {
+    if (isActiveGameMatching && activeGame && activeGame.rounds && activeGame.rounds.length > 0) {
+      return activeGame.id;
+    }
+    const firstWithRounds = filteredHistory.find((item) => item.rounds && item.rounds.length > 0);
+    return firstWithRounds ? firstWithRounds.id : (filteredHistory[0]?.id || null);
+  }, [isActiveGameMatching, activeGame, filteredHistory]);
 
+  // 控制历史页面中各对局卡片明细的展开/折叠状态（默认第一张卡片展开，其余卡片收起）
+  const [expandedHistoryCardIds, setExpandedHistoryCardIds] = useState<Record<string, boolean>>({});
+
+  // 判断指定卡片当前是否处于展开状态（未手动操作过的卡片：仅第一张默认展开，其余默认收起）
+  const isCardExpanded = (id: string) => {
+    if (expandedHistoryCardIds[id] !== undefined) {
+      return expandedHistoryCardIds[id];
+    }
+    return id === firstHistoryCardId;
+  };
+
+  // 切换指定卡片的明细展开/收起
   const toggleHistoryCard = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setCollapsedHistoryCardIds((prev) => ({
+    const currentExpanded = isCardExpanded(id);
+    setExpandedHistoryCardIds((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [id]: !currentExpanded,
     }));
   };
 
@@ -1006,16 +1031,16 @@ export default function App() {
                             onClick={(e) => toggleHistoryCard(activeGame.id, e)}
                             className="text-[11px] font-bold text-[#8C857B] hover:text-[#0E5C4E] flex items-center transition-colors"
                           >
-                            <span>{!collapsedHistoryCardIds[activeGame.id] ? '收起明细' : '展开明细'}</span>
+                            <span>{isCardExpanded(activeGame.id) ? '收起明细' : '展开明细'}</span>
                             <ChevronDown
                               className={`w-3.5 h-3.5 ml-0.5 transition-transform duration-200 ${
-                                !collapsedHistoryCardIds[activeGame.id] ? 'rotate-180 text-[#0E5C4E]' : ''
+                                isCardExpanded(activeGame.id) ? 'rotate-180 text-[#0E5C4E]' : ''
                               }`}
                             />
                           </button>
                         </div>
 
-                        {!collapsedHistoryCardIds[activeGame.id] && (
+                        {isCardExpanded(activeGame.id) && (
                           <div className="space-y-2 mt-2">
                             {activeGame.rounds.map((round) => (
                               <div
@@ -1143,16 +1168,16 @@ export default function App() {
                           onClick={(e) => toggleHistoryCard(item.id, e)}
                           className="text-[11px] font-bold text-[#8C857B] hover:text-[#0E5C4E] flex items-center transition-colors"
                         >
-                          <span>{!collapsedHistoryCardIds[item.id] ? '收起明细' : '展开明细'}</span>
+                          <span>{isCardExpanded(item.id) ? '收起明细' : '展开明细'}</span>
                           <ChevronDown
                             className={`w-3.5 h-3.5 ml-0.5 transition-transform duration-200 ${
-                              !collapsedHistoryCardIds[item.id] ? 'rotate-180 text-[#0E5C4E]' : ''
+                              isCardExpanded(item.id) ? 'rotate-180 text-[#0E5C4E]' : ''
                             }`}
                           />
                         </button>
                       </div>
 
-                      {!collapsedHistoryCardIds[item.id] && (
+                      {isCardExpanded(item.id) && (
                         <div className="space-y-2 mt-2">
                           {item.rounds.map((round) => (
                             <div
