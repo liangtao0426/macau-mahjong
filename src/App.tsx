@@ -643,7 +643,7 @@ export default function App() {
                       </div>
                       <div>
                         <h3 className="text-base font-bold text-[#2C3531]">诸暨麻将</h3>
-                        <p className="text-xs text-[#8C857B] mt-0.5">翻财神，起手两台，小心点炮</p>
+                        <p className="text-xs text-[#8C857B] mt-0.5">手翻财神，起手两台，小心点炮</p>
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-[#B0A89C] shrink-0" />
@@ -863,7 +863,7 @@ export default function App() {
                   className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center space-x-2 active:scale-[0.98] transition-all hover:bg-[#0A473C]"
                 >
                   <Plus className="w-5 h-5 stroke-[2.5]" />
-                  <span>+ 开始记分</span>
+                  <span>开始记分</span>
                 </button>
               )}
             </div>
