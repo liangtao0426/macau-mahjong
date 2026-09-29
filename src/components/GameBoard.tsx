@@ -259,7 +259,7 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
   };
 
   return (
-    <div className="flex flex-col flex-1 px-5 header-safe-top pb-safe-content">
+    <div className="flex flex-col flex-1 px-5 header-safe-top pb-safe-floating">
       {/* 1. 顶部标题栏 & 返回 */}
       <div className="flex justify-between items-start mb-5">
         <div>

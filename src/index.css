@@ -33,9 +33,14 @@
   padding-bottom: max(var(--sab), 0.5rem);
 }
 
-/* 页面内容区底部留白：确保页面支持自由滚动，且最底部内容能完整滚动到 Tab 栏上方，不再产生双重留白 */
+/* 普通页面内容区底部留白（历史、统计、新建）：避开底部 Tab 导航栏即可 */
 .pb-safe-content {
   padding-bottom: max(calc(var(--sab) + 5.5rem), 5.5rem);
+}
+
+/* 带有底部固定悬浮大按钮的页面（首页、记分页面）：内容底部留白必须同时避开 Tab 栏与悬浮大按钮，彻底防止内容被按钮遮挡 */
+.pb-safe-floating {
+  padding-bottom: max(calc(var(--sab) + 10rem), 10rem);
 }
 
 /* 悬浮/吸底大按钮：动态定位在底部 Tab 导航栏上方 */
