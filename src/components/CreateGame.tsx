@@ -3,6 +3,7 @@ import { ChevronLeft, Edit3, Check, X, Trash2 } from 'lucide-react';
 
 interface CreateGameProps {
   onBack?: () => void;
+  initialRule?: '杭州麻将' | '诸暨麻将';
   onStartGame?: (gameConfig: {
     rule: '杭州麻将' | '诸暨麻将';
     players: { seat: string; name: string }[];
@@ -18,9 +19,16 @@ const STORAGE_KEY = 'mahjong_frequent_friends';
 
 import { PLAYER_AVATARS } from './Avatars';
 
-export default function CreateGame({ onBack, onStartGame }: CreateGameProps) {
-  // 选中的玩法规则（默认杭州麻将）
-  const [selectedRule, setSelectedRule] = useState<'杭州麻将' | '诸暨麻将'>('杭州麻将');
+export default function CreateGame({ onBack, initialRule = '杭州麻将', onStartGame }: CreateGameProps) {
+  // 选中的玩法规则（默认使用传入的 initialRule）
+  const [selectedRule, setSelectedRule] = useState<'杭州麻将' | '诸暨麻将'>(initialRule);
+
+  // 当外部传入的 initialRule 发生变化时同步更新
+  useEffect(() => {
+    if (initialRule) {
+      setSelectedRule(initialRule);
+    }
+  }, [initialRule]);
 
   // 四个座位对应的玩家姓名（默认初始为空，每次进入清空）
   const [players, setPlayers] = useState([

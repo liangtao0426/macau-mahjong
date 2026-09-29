@@ -398,8 +398,14 @@ export default function App() {
   const totalRecentMatches = (activeGame ? 1 : 0) + historyList.length;
   const hasMoreRecentMatches = totalRecentMatches > 3;
 
+  // 新建牌局时预选的玩法规则（默认为杭州麻将，首页点击对应玩法卡片时联动）
+  const [selectedCreateRule, setSelectedCreateRule] = useState<'杭州麻将' | '诸暨麻将'>('杭州麻将');
+
   // 尝试前往新建牌局（如果有正在进行的牌局，则拦截）
-  const handleTryCreateGame = () => {
+  const handleTryCreateGame = (rule?: '杭州麻将' | '诸暨麻将') => {
+    if (rule === '杭州麻将' || rule === '诸暨麻将') {
+      setSelectedCreateRule(rule);
+    }
     if (activeGame) {
       setShowActiveAlertModal(true);
     } else {
@@ -506,6 +512,7 @@ export default function App() {
             />
           ) : (
             <CreateGame 
+              initialRule={selectedCreateRule}
               onBack={() => setActiveTab('home')}
               onStartGame={handleStartNewGame}
             />
@@ -606,7 +613,7 @@ export default function App() {
                 <div className="space-y-3">
                   {/* 卡片1：杭州麻将 */}
                   <div 
-                    onClick={handleTryCreateGame}
+                    onClick={() => handleTryCreateGame('杭州麻将')}
                     className={`bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border flex items-center justify-between transition-transform active:scale-[0.99] cursor-pointer ${
                       activeGame ? 'border-[#F0EADF] opacity-90' : 'border-[#F0EADF] hover:border-[#0E5C4E]/30'
                     }`}
@@ -625,7 +632,7 @@ export default function App() {
 
                   {/* 卡片2：诸暨麻将 */}
                   <div 
-                    onClick={handleTryCreateGame}
+                    onClick={() => handleTryCreateGame('诸暨麻将')}
                     className={`bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border flex items-center justify-between transition-transform active:scale-[0.99] cursor-pointer ${
                       activeGame ? 'border-[#F0EADF] opacity-90' : 'border-[#F0EADF] hover:border-[#C86328]/30'
                     }`}
@@ -852,7 +859,7 @@ export default function App() {
                 </button>
               ) : (
                 <button 
-                  onClick={handleTryCreateGame}
+                  onClick={() => handleTryCreateGame()}
                   className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center space-x-2 active:scale-[0.98] transition-all hover:bg-[#0A473C]"
                 >
                   <Plus className="w-5 h-5 stroke-[2.5]" />
