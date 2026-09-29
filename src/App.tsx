@@ -564,8 +564,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* 主体内容区 */}
-            <main className="flex-1 px-5 space-y-5">
+            {/* 主体内容区（增加底部留白，确保滑到最底部时内容不被固定悬浮按钮遮挡） */}
+            <main className="flex-1 px-5 space-y-5 pb-20">
 
               {/* 核心业务状态：如果当前有进行中的牌局，在首页最醒目位置展示！ */}
               {activeGame && (
@@ -869,28 +869,30 @@ export default function App() {
 
             </main>
 
-            {/* 页面底部居中大按钮 */}
-            <div className="sticky bottom-safe-action left-0 right-0 px-5 pt-2 pb-3 bg-gradient-to-t from-[#F8F3EB] via-[#F8F3EB]/90 to-transparent z-40">
-              {activeGame ? (
-                <button 
-                  onClick={() => {
-                    setScoreSubView('board');
-                    setActiveTab('score');
-                  }}
-                  className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center space-x-2 active:scale-[0.98] transition-all hover:bg-[#0A473C]"
-                >
-                  <Plus className="w-5 h-5 stroke-[2.5]" />
-                  <span>进入进行中牌局 (第 {activeGame.rounds.length + 1} 轮)</span>
-                </button>
-              ) : (
-                <button 
-                  onClick={() => handleTryCreateGame()}
-                  className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center space-x-2 active:scale-[0.98] transition-all hover:bg-[#0A473C]"
-                >
-                  <Plus className="w-5 h-5 stroke-[2.5]" />
-                  <span>开始记分</span>
-                </button>
-              )}
+            {/* 页面底部居中大按钮：固定悬浮在底部导航栏上方，不随页面滑动发生任何位置偏移 */}
+            <div className="fixed bottom-safe-action left-0 right-0 max-w-md mx-auto px-5 pt-2 pb-3 bg-gradient-to-t from-[#F8F3EB] via-[#F8F3EB]/90 to-transparent z-40 pointer-events-none">
+              <div className="pointer-events-auto">
+                {activeGame ? (
+                  <button 
+                    onClick={() => {
+                      setScoreSubView('board');
+                      setActiveTab('score');
+                    }}
+                    className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center space-x-2 active:scale-[0.98] transition-all hover:bg-[#0A473C]"
+                  >
+                    <Plus className="w-5 h-5 stroke-[2.5]" />
+                    <span>进入进行中牌局 (第 {activeGame.rounds.length + 1} 轮)</span>
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleTryCreateGame()}
+                    className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center space-x-2 active:scale-[0.98] transition-all hover:bg-[#0A473C]"
+                  >
+                    <Plus className="w-5 h-5 stroke-[2.5]" />
+                    <span>开始记分</span>
+                  </button>
+                )}
+              </div>
             </div>
           </>
         ) : activeTab === 'history' ? (
