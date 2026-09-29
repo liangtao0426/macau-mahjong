@@ -211,40 +211,63 @@ export default function App() {
     }
   }, [activeTab]);
 
-  // 统计页面筛选：年份与月份（默认 2026年3月，与设计图保持一致）
-  const [statsYear, setStatsYear] = useState<number>(2026);
-  const [statsMonth, setStatsMonth] = useState<number>(3);
+  // 统计页面筛选：年份与月份（默认当前年份与当前月份）
+  const [statsYear, setStatsYear] = useState<number>(() => Math.max(START_YEAR, new Date().getFullYear()));
+  const [statsMonth, setStatsMonth] = useState<number>(() => new Date().getMonth() + 1);
 
   // 年月弹窗针对的目标页面：'history' | 'stats'
   const [pickerTarget, setPickerTarget] = useState<'history' | 'stats'>('history');
 
-  // 统计页面数据汇总计算（如果当前选定月份有真实对局则实时计算，否则呈现设计图完全一致的样本数据）
+  // 每次进入统计页面时：默认选择“当前年份”与“当前月份”
+  useEffect(() => {
+    if (activeTab === 'stats') {
+      const now = new Date();
+      setStatsYear(Math.max(START_YEAR, now.getFullYear()));
+      setStatsMonth(now.getMonth() + 1);
+    }
+  }, [activeTab]);
+
+  // 计算进行中对局各个玩家的累计总分
+  const activeGameScores = useMemo(() => {
+    if (!activeGame) return {};
+    const map: Record<string, number> = {};
+    activeGame.players.forEach((p) => {
+      map[p.name] = 0;
+    });
+    activeGame.rounds.forEach((round) => {
+      round.playerScores.forEach((ps) => {
+        map[ps.name] = (map[ps.name] || 0) + ps.score;
+      });
+    });
+    return map;
+  }, [activeGame]);
+
+  // 统计页面真实数据汇总计算（彻底去除所有模拟假数据）
   const statsData = useMemo(() => {
-    const matches = historyList.filter((item) => {
+    // 汇总符合选定年月的对局列表（已结束历史战绩 + 若有进行中牌局且属于当月则实时联动）
+    const matches: MatchRecord[] = historyList.filter((item) => {
       const { year, month } = getRecordYearMonth(item);
       return year === statsYear && month === statsMonth;
     });
 
-    if (matches.length === 0) {
-      // 默认呈现设计图完全一致的样本数据
-      return {
-        totalMatches: 12,
-        totalRounds: 89,
-        topWinner: '阿强',
-        weeklyGames: [
-          { week: '第1周', games: 3, percentage: 55 },
-          { week: '第2周', games: 5, percentage: 80 },
-          { week: '第3周', games: 2, percentage: 38 },
-          { week: '第4周', games: 4, percentage: 55 },
-        ],
-        rankingList: [
-          { name: '阿强', wins: 8, matches: 12, score: 238 },
-          { name: '我', wins: 6, matches: 12, score: 84 },
-          { name: '小美', wins: 4, matches: 12, score: -12 },
-          { name: '老陈', wins: 2, matches: 12, score: -310 },
-        ],
-        isSample: true,
-      };
+    // 如果当前有进行中牌局且属于当前统计年月，实时纳入统计
+    if (activeGame && activeGame.rounds.length > 0) {
+      const gameDate = activeGame.startTime ? new Date(activeGame.startTime) : new Date();
+      if (gameDate.getFullYear() === statsYear && (gameDate.getMonth() + 1) === statsMonth) {
+        matches.push({
+          id: activeGame.id,
+          type: activeGame.rule,
+          date: formatGameDate(activeGame.startTime),
+          totalRounds: activeGame.rounds.length,
+          duration: getGameDuration(activeGame.startTime, activeGame.rounds.length),
+          players: activeGame.players.map((p, idx) => ({
+            name: p.name,
+            score: activeGameScores[p.name] || 0,
+            avatarIndex: idx % PLAYER_AVATARS.length,
+          })),
+          timestamp: activeGame.startTime || Date.now(),
+        });
+      }
     }
 
     const totalMatches = matches.length;
@@ -280,14 +303,15 @@ export default function App() {
       }))
       .sort((a, b) => b.score - a.score);
 
-    const topWinner = rankingList.length > 0 && rankingList[0].score > 0 ? rankingList[0].name : (rankingList[0]?.name || '暂无');
+    // 最大赢家：仅当有玩家净得分为正时显示第一名，否则为“暂无”
+    const topWinner = rankingList.length > 0 && rankingList[0].score > 0 ? rankingList[0].name : '暂无';
 
     const maxWeekly = Math.max(...weeklyCounts, 1);
     const weeklyGames = [
-      { week: '第1周', games: weeklyCounts[0], percentage: Math.max(15, Math.round((weeklyCounts[0] / maxWeekly) * 85)) },
-      { week: '第2周', games: weeklyCounts[1], percentage: Math.max(15, Math.round((weeklyCounts[1] / maxWeekly) * 85)) },
-      { week: '第3周', games: weeklyCounts[2], percentage: Math.max(15, Math.round((weeklyCounts[2] / maxWeekly) * 85)) },
-      { week: '第4周', games: weeklyCounts[3], percentage: Math.max(15, Math.round((weeklyCounts[3] / maxWeekly) * 85)) },
+      { week: '第1周', games: weeklyCounts[0], percentage: weeklyCounts[0] > 0 ? Math.max(15, Math.round((weeklyCounts[0] / maxWeekly) * 85)) : 0 },
+      { week: '第2周', games: weeklyCounts[1], percentage: weeklyCounts[1] > 0 ? Math.max(15, Math.round((weeklyCounts[1] / maxWeekly) * 85)) : 0 },
+      { week: '第3周', games: weeklyCounts[2], percentage: weeklyCounts[2] > 0 ? Math.max(15, Math.round((weeklyCounts[2] / maxWeekly) * 85)) : 0 },
+      { week: '第4周', games: weeklyCounts[3], percentage: weeklyCounts[3] > 0 ? Math.max(15, Math.round((weeklyCounts[3] / maxWeekly) * 85)) : 0 },
     ];
 
     return {
@@ -296,9 +320,8 @@ export default function App() {
       topWinner,
       weeklyGames,
       rankingList,
-      isSample: false,
     };
-  }, [historyList, statsYear, statsMonth]);
+  }, [historyList, activeGame, activeGameScores, statsYear, statsMonth]);
 
   // 根据当前玩法与年月过滤出的历史对局
   const filteredHistory = useMemo(() => {
@@ -358,20 +381,6 @@ export default function App() {
     }
   }, [activeGame]);
 
-  // 计算进行中对局各个玩家的累计总分
-  const activeGameScores = useMemo(() => {
-    if (!activeGame) return {};
-    const map: Record<string, number> = {};
-    activeGame.players.forEach((p) => {
-      map[p.name] = 0;
-    });
-    activeGame.rounds.forEach((round) => {
-      round.playerScores.forEach((ps) => {
-        map[ps.name] = (map[ps.name] || 0) + ps.score;
-      });
-    });
-    return map;
-  }, [activeGame]);
 
   // 尝试前往新建牌局（如果有正在进行的牌局，则拦截）
   const handleTryCreateGame = () => {
@@ -1174,151 +1183,6 @@ export default function App() {
                 </div>
               )}
             </div>
-
-            {/* 年月筛选弹窗：年份与月份分开选择 */}
-            {showMonthPicker && (
-              <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-5">
-                <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF]">
-                  {/* 弹窗头部 */}
-                  <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-[#F5EFE6]">
-                    <div>
-                      <h3 className="text-sm font-bold text-[#0E5C4E]">
-                        {pickerTarget === 'stats' ? '按年月筛选统计' : '按年月筛选对局'}
-                      </h3>
-                      <p className="text-[11px] text-[#8C857B] mt-0.5">
-                        {pickerTarget === 'stats' ? '选择查看特定月份的数据统计' : '选择查看特定月份的历史对局'}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setShowMonthPicker(false)}
-                      className="p-1 rounded-full text-[#8C857B] hover:text-[#2C3531] hover:bg-[#FAF7F2] transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* 1. 年份滚轮选择区（iOS 滚轮样式，从2026年开始，上下滑动滚轮拨动年份） */}
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-[#5A5248]">年份（上下滑动滚轮）</span>
-                      <span className="text-xs text-[#0E5C4E] font-extrabold bg-[#EDF5F3] px-2.5 py-0.5 rounded-full">
-                        {pickerYear}年
-                      </span>
-                    </div>
-
-                    {/* 滚轮外部视口容器（高度固定为 3 项 = 120px） */}
-                    <div className="relative h-[120px] rounded-2xl bg-[#FAF7F2] border border-[#F0EADF] overflow-hidden">
-                      {/* 中间高亮瞄准框（居中位置 top: 40px, height: 40px） */}
-                      <div className="pointer-events-none absolute inset-x-2 top-[40px] h-[40px] rounded-xl bg-white border border-[#0E5C4E]/20 shadow-xs z-10 flex items-center justify-between px-3">
-                        <span className="text-[10px] text-[#0E5C4E]/40 font-bold">▲</span>
-                        <span className="text-[10px] text-[#0E5C4E]/40 font-bold">▼</span>
-                      </div>
-
-                      {/* 顶部与底部光影遮罩渐变层，增强 3D 滚轮立体感 */}
-                      <div className="pointer-events-none absolute inset-x-0 top-0 h-[40px] bg-gradient-to-b from-[#FAF7F2] via-[#FAF7F2]/80 to-transparent z-20" />
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[40px] bg-gradient-to-t from-[#FAF7F2] via-[#FAF7F2]/80 to-transparent z-20" />
-
-                      {/* 内部真实滚动列表 */}
-                      <div
-                        ref={yearRollerRef}
-                        onScroll={handleYearScroll}
-                        className="h-full overflow-y-auto snap-y snap-mandatory py-[40px] no-scrollbar scroll-smooth relative z-10"
-                      >
-                        {AVAILABLE_YEARS.map((y, idx) => {
-                          const isSelected = pickerYear === y;
-                          const isCurrent = new Date().getFullYear() === y;
-                          return (
-                            <div
-                              key={y}
-                              onClick={() => handleYearItemClick(y, idx)}
-                              className={`h-[40px] flex items-center justify-center space-x-1.5 snap-center cursor-pointer select-none transition-all duration-150 ${
-                                isSelected
-                                  ? 'text-[#0E5C4E] font-black text-base scale-105'
-                                  : 'text-[#8C857B] font-medium text-xs opacity-50 hover:opacity-80'
-                              }`}
-                            >
-                              <span>{y}年</span>
-                              {isCurrent && (
-                                <span
-                                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                                    isSelected
-                                      ? 'bg-[#0E5C4E] text-white shadow-2xs'
-                                      : 'bg-[#E5DCD0] text-[#5A5248]'
-                                  }`}
-                                >
-                                  今年
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 2. 月份选择区（固定12个月） */}
-                  <div className="mb-5">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-[#5A5248]">月份</span>
-                      <span className="text-[11px] text-[#0E5C4E] font-bold">{pickerMonth}月</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {FIXED_MONTHS.map((m) => {
-                        const isSelected = pickerMonth === m;
-                        const now = new Date();
-                        const isCurrentMonth = now.getFullYear() === pickerYear && (now.getMonth() + 1) === m;
-                        return (
-                          <button
-                            key={m}
-                            type="button"
-                            onClick={() => setPickerMonth(m)}
-                            className={`py-2.5 rounded-xl text-xs font-bold transition-all relative ${
-                              isSelected
-                                ? 'bg-[#0E5C4E] text-white shadow-2xs scale-[1.02]'
-                                : 'bg-[#FAF7F2] text-[#5A5248] hover:bg-[#EFE8DD]'
-                            }`}
-                          >
-                            <span>{m}月</span>
-                            {isCurrentMonth && (
-                              <span className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${
-                                isSelected ? 'bg-amber-300' : 'bg-[#C86328]'
-                              }`} title="当前月" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* 底部按钮栏 */}
-                  <div className="flex space-x-2 pt-2 border-t border-[#F5EFE6]">
-                    <button
-                      type="button"
-                      onClick={handleResetToCurrent}
-                      className="py-2.5 px-3.5 rounded-xl text-xs font-bold text-[#0E5C4E] bg-[#EDF5F3] hover:bg-[#DFECE9] transition-all shrink-0 active:scale-95"
-                    >
-                      当前月
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (pickerTarget === 'stats') {
-                          setStatsYear(pickerYear);
-                          setStatsMonth(pickerMonth);
-                        } else {
-                          setSelectedYear(pickerYear);
-                          setSelectedMonth(pickerMonth);
-                        }
-                        setShowMonthPicker(false);
-                      }}
-                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0E5C4E] hover:bg-[#0A473C] transition-all shadow-xs active:scale-[0.98]"
-                    >
-                      确定 ({pickerYear}年{pickerMonth}月)
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         ) : (
           /* 【数据统计】视图：完全还原参考设计 UI */
@@ -1354,9 +1218,10 @@ export default function App() {
                   setPickerMonth(statsMonth);
                   setShowMonthPicker(true);
                 }}
-                className="bg-white text-[#3A4440] text-xs font-semibold px-3.5 py-1 rounded-full border border-[#E8DFC8] shadow-2xs hover:bg-[#FAF7F2] active:scale-95 transition-all"
+                className="bg-white text-[#0E5C4E] px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center border border-[#E8DFC8] shadow-2xs hover:bg-[#FAF7F2] active:scale-95 transition-all"
               >
-                切换月份
+                <Calendar className="w-3.5 h-3.5 mr-1.5 text-[#0E5C4E]" />
+                <span>切换月份</span>
               </button>
             </div>
 
@@ -1398,14 +1263,18 @@ export default function App() {
                     <div key={w.week} className="flex flex-col items-center w-12 group">
                       {/* 柱子高度区域 */}
                       <div className="w-full flex justify-center items-end h-[68px]">
-                        <div
-                          style={{ height: `${w.percentage}%` }}
-                          className="w-6 bg-[#0E5C4E] rounded-t-sm transition-all duration-300 relative group-hover:bg-[#0A473C]"
-                        >
-                          <span className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-[#0E5C4E] whitespace-nowrap">
-                            {w.games}场
-                          </span>
-                        </div>
+                        {w.games > 0 ? (
+                          <div
+                            style={{ height: `${w.percentage}%` }}
+                            className="w-6 bg-[#0E5C4E] rounded-t-md transition-all duration-300 relative group-hover:bg-[#0A473C]"
+                          >
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-[#0E5C4E] whitespace-nowrap bg-white/90 px-1 rounded shadow-2xs">
+                              {w.games}场
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="w-6 h-1 bg-[#E8DFC8]/60 rounded-full mb-0.5" />
+                        )}
                       </div>
                       {/* 底部周标签 */}
                       <span className="text-xs text-[#8C857B] font-medium mt-2">
@@ -1430,79 +1299,87 @@ export default function App() {
               <h3 className="text-base font-extrabold text-[#0E5C4E] mb-3">
                 雀友大盘排行
               </h3>
-              <div className="space-y-2.5">
-                {statsData.rankingList.map((player, idx) => {
-                  const isWinner = player.score > 0;
-                  const isLoser = player.score < 0;
-                  return (
-                    <div
-                      key={player.name}
-                      className={`rounded-2xl p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between transition-all ${
-                        idx === 0
-                          ? 'bg-gradient-to-r from-amber-50/40 via-white to-white border border-[#FDE68A]'
-                          : idx === 1
-                          ? 'bg-gradient-to-r from-slate-50/50 via-white to-white border border-[#E2E8F0]'
-                          : idx === 2
-                          ? 'bg-gradient-to-r from-orange-50/30 via-white to-white border border-[#FED7AA]'
-                          : 'bg-white border border-[#F0EADF]'
-                      }`}
-                    >
-                      {/* 左侧：排名专属徽标 + 姓名 + 胜负场次 */}
-                      <div className="flex items-center space-x-3">
-                        {idx === 0 ? (
-                          /* 冠军专属徽标：金牌 + 皇冠 */
-                          <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
-                            <Crown className="w-3.5 h-3.5 text-[#F59E0B] fill-[#FDE047] absolute -top-2.5 left-1/2 -translate-x-1/2 drop-shadow-xs z-10" />
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FDE047] via-[#F59E0B] to-[#D97706] text-white font-black text-xs flex items-center justify-center shadow-[0_2px_8px_rgba(217,119,6,0.35)] ring-2 ring-[#FEF08A]/80">
-                              1
-                            </div>
-                          </div>
-                        ) : idx === 1 ? (
-                          /* 亚军专属徽标：白金银牌 */
-                          <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#F1F5F9] via-[#94A3B8] to-[#475569] text-white font-black text-xs flex items-center justify-center shadow-[0_2px_8px_rgba(71,85,105,0.3)] ring-2 ring-[#E2E8F0]">
-                              2
-                            </div>
-                          </div>
-                        ) : idx === 2 ? (
-                          /* 季军专属徽标：赤铜铜牌 */
-                          <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FED7AA] via-[#EA580C] to-[#9A3412] text-white font-black text-xs flex items-center justify-center shadow-[0_2px_8px_rgba(154,52,18,0.3)] ring-2 ring-[#FFEDD5]">
-                              3
-                            </div>
-                          </div>
-                        ) : (
-                          /* 第4名及以后：常规素雅米灰徽标 */
-                          <div className="w-7 h-7 rounded-full bg-[#FAF0E6] text-[#8C857B] font-extrabold text-xs flex items-center justify-center shrink-0 border border-[#EFE8DD]">
-                            {idx + 1}
-                          </div>
-                        )}
-                        <div>
-                          <div className="text-sm font-extrabold text-[#2C3531]">
-                            {player.name}
-                          </div>
-                          <div className="text-[11px] text-[#8C857B] font-medium mt-0.5">
-                            {player.wins}胜 / {player.matches}场
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 右侧：得分（根据用户确认的“红赢绿输”规则） */}
+              {statsData.rankingList.length > 0 ? (
+                <div className="space-y-2.5">
+                  {statsData.rankingList.map((player, idx) => {
+                    const isWinner = player.score > 0;
+                    const isLoser = player.score < 0;
+                    return (
                       <div
-                        className={`text-base font-black tracking-tight ${
-                          isWinner
-                            ? 'text-[#DC2626]'
-                            : isLoser
-                            ? 'text-[#16A34A]'
-                            : 'text-[#8C857B]'
+                        key={player.name}
+                        className={`rounded-2xl p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between transition-all ${
+                          idx === 0
+                            ? 'bg-gradient-to-r from-amber-50/40 via-white to-white border border-[#FDE68A]'
+                            : idx === 1
+                            ? 'bg-gradient-to-r from-slate-50/50 via-white to-white border border-[#E2E8F0]'
+                            : idx === 2
+                            ? 'bg-gradient-to-r from-orange-50/30 via-white to-white border border-[#FED7AA]'
+                            : 'bg-white border border-[#F0EADF]'
                         }`}
                       >
-                        {player.score > 0 ? `+${player.score}` : player.score}
+                        {/* 左侧：排名专属徽标 + 姓名 + 胜负场次 */}
+                        <div className="flex items-center space-x-3">
+                          {idx === 0 ? (
+                            /* 冠军专属徽标：金牌 + 皇冠 */
+                            <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
+                              <Crown className="w-3.5 h-3.5 text-[#F59E0B] fill-[#FDE047] absolute -top-2.5 left-1/2 -translate-x-1/2 drop-shadow-xs z-10" />
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FDE047] via-[#F59E0B] to-[#D97706] text-white font-black text-xs flex items-center justify-center shadow-[0_2px_8px_rgba(217,119,6,0.35)] ring-2 ring-[#FEF08A]/80">
+                                1
+                              </div>
+                            </div>
+                          ) : idx === 1 ? (
+                            /* 亚军专属徽标：白金银牌 */
+                            <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#F1F5F9] via-[#94A3B8] to-[#475569] text-white font-black text-xs flex items-center justify-center shadow-[0_2px_8px_rgba(71,85,105,0.3)] ring-2 ring-[#E2E8F0]">
+                                2
+                              </div>
+                            </div>
+                          ) : idx === 2 ? (
+                            /* 季军专属徽标：赤铜铜牌 */
+                            <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FED7AA] via-[#EA580C] to-[#9A3412] text-white font-black text-xs flex items-center justify-center shadow-[0_2px_8px_rgba(154,52,18,0.3)] ring-2 ring-[#FFEDD5]">
+                                3
+                              </div>
+                            </div>
+                          ) : (
+                            /* 第4名及以后：常规素雅米灰徽标 */
+                            <div className="w-7 h-7 rounded-full bg-[#FAF0E6] text-[#8C857B] font-extrabold text-xs flex items-center justify-center shrink-0 border border-[#EFE8DD]">
+                              {idx + 1}
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm font-extrabold text-[#2C3531]">
+                              {player.name}
+                            </div>
+                            <div className="text-[11px] text-[#8C857B] font-medium mt-0.5">
+                              {player.wins}胜 / {player.matches}场
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 右侧：得分（根据用户确认的“红赢绿输”规则） */}
+                        <div
+                          className={`text-base font-black tracking-tight ${
+                            isWinner
+                              ? 'text-[#DC2626]'
+                              : isLoser
+                              ? 'text-[#16A34A]'
+                              : 'text-[#8C857B]'
+                          }`}
+                        >
+                          {player.score > 0 ? `+${player.score}` : player.score}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl p-8 border border-[#F0EADF] text-center shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                  <div className="text-2xl mb-2 select-none">🀄</div>
+                  <div className="text-xs font-bold text-[#5A5248]">本月暂无牌局排行数据</div>
+                  <div className="text-[11px] text-[#8C857B] mt-1">牌局结算后，将自动在此生成雀友大盘战绩与排行</div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1563,7 +1440,12 @@ export default function App() {
 
           {/* Tab 4: 统计 */}
           <button 
-            onClick={() => setActiveTab('stats')}
+            onClick={() => {
+              const now = new Date();
+              setStatsYear(Math.max(START_YEAR, now.getFullYear()));
+              setStatsMonth(now.getMonth() + 1);
+              setActiveTab('stats');
+            }}
             className="flex flex-col items-center justify-center space-y-1 text-xs"
           >
             <div className={`p-1 rounded-full ${activeTab === 'stats' ? 'bg-[#EBF4F2] text-[#0E5C4E]' : 'text-[#8C857B]'}`}>
@@ -1605,6 +1487,150 @@ export default function App() {
                   className="flex-1 py-3 bg-[#0E5C4E] text-white rounded-full text-xs font-bold shadow-md hover:bg-[#0A473C] active:scale-95 transition-all"
                 >
                   进入当前牌局
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* 年月筛选全局弹窗：历史页面与统计页面共用同一套高品质 iOS 滚轮日历组件 */}
+        {showMonthPicker && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-5">
+            <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF]">
+              {/* 弹窗头部 */}
+              <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-[#F5EFE6]">
+                <div>
+                  <h3 className="text-sm font-bold text-[#0E5C4E]">
+                    {pickerTarget === 'stats' ? '按年月筛选统计' : '按年月筛选对局'}
+                  </h3>
+                  <p className="text-[11px] text-[#8C857B] mt-0.5">
+                    {pickerTarget === 'stats' ? '选择查看特定月份的数据统计' : '选择查看特定月份的历史对局'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowMonthPicker(false)}
+                  className="p-1 rounded-full text-[#8C857B] hover:text-[#2C3531] hover:bg-[#FAF7F2] transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* 1. 年份滚轮选择区（iOS 滚轮样式，从2026年开始，上下滑动滚轮拨动年份） */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-[#5A5248]">年份（上下滑动滚轮）</span>
+                  <span className="text-xs text-[#0E5C4E] font-extrabold bg-[#EDF5F3] px-2.5 py-0.5 rounded-full">
+                    {pickerYear}年
+                  </span>
+                </div>
+
+                {/* 滚轮外部视口容器（高度固定为 3 项 = 120px） */}
+                <div className="relative h-[120px] rounded-2xl bg-[#FAF7F2] border border-[#F0EADF] overflow-hidden">
+                  {/* 中间高亮瞄准框（居中位置 top: 40px, height: 40px） */}
+                  <div className="pointer-events-none absolute inset-x-2 top-[40px] h-[40px] rounded-xl bg-white border border-[#0E5C4E]/20 shadow-xs z-10 flex items-center justify-between px-3">
+                    <span className="text-[10px] text-[#0E5C4E]/40 font-bold">▲</span>
+                    <span className="text-[10px] text-[#0E5C4E]/40 font-bold">▼</span>
+                  </div>
+
+                  {/* 顶部与底部光影遮罩渐变层，增强 3D 滚轮立体感 */}
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-[40px] bg-gradient-to-b from-[#FAF7F2] via-[#FAF7F2]/80 to-transparent z-20" />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[40px] bg-gradient-to-t from-[#FAF7F2] via-[#FAF7F2]/80 to-transparent z-20" />
+
+                  {/* 内部真实滚动列表 */}
+                  <div
+                    ref={yearRollerRef}
+                    onScroll={handleYearScroll}
+                    className="h-full overflow-y-auto snap-y snap-mandatory py-[40px] no-scrollbar scroll-smooth relative z-10"
+                  >
+                    {AVAILABLE_YEARS.map((y, idx) => {
+                      const isSelected = pickerYear === y;
+                      const isCurrent = new Date().getFullYear() === y;
+                      return (
+                        <div
+                          key={y}
+                          onClick={() => handleYearItemClick(y, idx)}
+                          className={`h-[40px] flex items-center justify-center space-x-1.5 snap-center cursor-pointer select-none transition-all duration-150 ${
+                            isSelected
+                              ? 'text-[#0E5C4E] font-black text-base scale-105'
+                              : 'text-[#8C857B] font-medium text-xs opacity-50 hover:opacity-80'
+                          }`}
+                        >
+                          <span>{y}年</span>
+                          {isCurrent && (
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                                isSelected
+                                  ? 'bg-[#0E5C4E] text-white shadow-2xs'
+                                  : 'bg-[#E5DCD0] text-[#5A5248]'
+                              }`}
+                            >
+                              今年
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. 月份选择区（固定12个月） */}
+              <div className="mb-5">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-[#5A5248]">月份</span>
+                  <span className="text-[11px] text-[#0E5C4E] font-bold">{pickerMonth}月</span>
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {FIXED_MONTHS.map((m) => {
+                    const isSelected = pickerMonth === m;
+                    const now = new Date();
+                    const isCurrentMonth = now.getFullYear() === pickerYear && (now.getMonth() + 1) === m;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setPickerMonth(m)}
+                        className={`py-2.5 rounded-xl text-xs font-bold transition-all relative ${
+                          isSelected
+                            ? 'bg-[#0E5C4E] text-white shadow-2xs scale-[1.02]'
+                            : 'bg-[#FAF7F2] text-[#5A5248] hover:bg-[#EFE8DD]'
+                        }`}
+                      >
+                        <span>{m}月</span>
+                        {isCurrentMonth && (
+                          <span className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${
+                            isSelected ? 'bg-amber-300' : 'bg-[#C86328]'
+                          }`} title="当前月" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 底部按钮栏 */}
+              <div className="flex space-x-2 pt-2 border-t border-[#F5EFE6]">
+                <button
+                  type="button"
+                  onClick={handleResetToCurrent}
+                  className="py-2.5 px-3.5 rounded-xl text-xs font-bold text-[#0E5C4E] bg-[#EDF5F3] hover:bg-[#DFECE9] transition-all shrink-0 active:scale-95"
+                >
+                  当前月
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pickerTarget === 'stats') {
+                      setStatsYear(pickerYear);
+                      setStatsMonth(pickerMonth);
+                    } else {
+                      setSelectedYear(pickerYear);
+                      setSelectedMonth(pickerMonth);
+                    }
+                    setShowMonthPicker(false);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0E5C4E] hover:bg-[#0A473C] transition-all shadow-xs active:scale-[0.98]"
+                >
+                  确定 ({pickerYear}年{pickerMonth}月)
                 </button>
               </div>
             </div>
