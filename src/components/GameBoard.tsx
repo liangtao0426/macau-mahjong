@@ -259,7 +259,7 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
   };
 
   return (
-    <div className="flex flex-col flex-1 px-5 pt-7 pb-24">
+    <div className="flex flex-col flex-1 px-5 header-safe-top pb-safe-content">
       {/* 1. 顶部标题栏 & 返回 */}
       <div className="flex justify-between items-start mb-5">
         <div>
@@ -420,7 +420,7 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
       </section>
 
       {/* 4. 底部居中操作大按钮 */}
-      <div className="fixed bottom-16 left-0 right-0 max-w-md mx-auto px-5 pt-2 pb-3 bg-gradient-to-t from-[#F8F3EB] via-[#F8F3EB]/90 to-transparent z-40">
+      <div className="fixed bottom-safe-action left-0 right-0 max-w-md mx-auto px-5 pt-2 pb-3 bg-gradient-to-t from-[#F8F3EB] via-[#F8F3EB]/90 to-transparent z-40">
         <button
           onClick={handleOpenRecordModal}
           className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center space-x-1.5 active:scale-[0.98] transition-all hover:bg-[#0A473C]"
@@ -429,10 +429,10 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
         </button>
       </div>
 
-      {/* 5. 记录本轮明细弹窗 (Modal) - z-[80]层级且带pb-12，保证不被底部Tab遮挡 */}
+      {/* 5. 记录本轮明细弹窗 (Modal) - z-[80]层级且带pb-safe-content，保证不被底部Tab遮挡 */}
       {showRecordModal && (
         <div className="fixed inset-0 bg-black/50 z-[80] flex items-end justify-center transition-opacity">
-          <div className="w-full max-w-md bg-[#FAF7F2] rounded-t-3xl p-6 pb-12 shadow-2xl animate-in slide-in-from-bottom duration-200 max-h-[85vh] overflow-y-auto">
+          <div className="w-full max-w-md bg-[#FAF7F2] rounded-t-3xl p-6 pb-safe-content shadow-2xl animate-in slide-in-from-bottom duration-200 max-h-[88vh] overflow-y-auto">
             {/* 弹窗头部 */}
             <div className="flex justify-between items-center mb-4">
               <div>
@@ -567,7 +567,7 @@ export default function GameBoard({ game, onBack, onAddRound, onEndGame }: GameB
       {/* 6. 结束对局确认弹窗 */}
       {showEndConfirmModal && (
         <div className="fixed inset-0 bg-black/50 z-[90] flex items-center justify-center p-6">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF]">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF] max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-bold text-[#0E5C4E] mb-2 text-center">
               确认结束本场牌局？
             </h3>

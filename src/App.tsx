@@ -498,7 +498,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8F3EB] flex justify-center selection:bg-[#0E5C4E]/20">
       {/* 模拟手机容器 (Mobile Device Shell) */}
-      <div className="w-full max-w-md bg-[#F8F3EB] flex flex-col min-h-screen relative pb-20 shadow-xl">
+      <div className="w-full max-w-md bg-[#F8F3EB] flex flex-col min-h-screen relative pb-safe-content shadow-xl">
         
         {/* 根据当前 Tab 切换主视图 */}
         {activeTab === 'score' ? (
@@ -521,7 +521,7 @@ export default function App() {
           /* 【首页】视图 */
           <>
             {/* 顶部 APP 标题与 Slogan */}
-            <div className="px-6 pt-7 pb-4">
+            <div className="px-6 header-safe-top pb-4">
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className="text-2xl font-extrabold text-[#0E5C4E] tracking-tight">
@@ -845,7 +845,7 @@ export default function App() {
             </main>
 
             {/* 页面底部居中大按钮 */}
-            <div className="sticky bottom-16 left-0 right-0 px-5 pt-2 pb-3 bg-gradient-to-t from-[#F8F3EB] via-[#F8F3EB]/90 to-transparent z-40">
+            <div className="sticky bottom-safe-action left-0 right-0 px-5 pt-2 pb-3 bg-gradient-to-t from-[#F8F3EB] via-[#F8F3EB]/90 to-transparent z-40">
               {activeGame ? (
                 <button 
                   onClick={() => {
@@ -870,9 +870,9 @@ export default function App() {
           </>
         ) : activeTab === 'history' ? (
           /* 【历史牌局】视图：严格按照参考设计 UI 实现 */
-          <div className="flex-1 flex flex-col pb-24">
+          <div className="flex-1 flex flex-col pb-safe-content">
             {/* 顶部标题区 */}
-            <div className="px-6 pt-7 pb-3">
+            <div className="px-6 header-safe-top pb-3">
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className="text-2xl font-extrabold text-[#0E5C4E] tracking-tight">
@@ -1221,9 +1221,9 @@ export default function App() {
           </div>
         ) : (
           /* 【数据统计】视图：完全还原参考设计 UI */
-          <div className="flex-1 flex flex-col pb-24">
+          <div className="flex-1 flex flex-col pb-safe-content">
             {/* 1. 顶部标题栏 */}
-            <div className="px-6 pt-7 pb-3">
+            <div className="px-6 header-safe-top pb-3">
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className="text-2xl font-extrabold text-[#0E5C4E] tracking-tight">
@@ -1420,7 +1420,7 @@ export default function App() {
         )}
 
         {/* 全局最底部 Tab 导航栏 */}
-        <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-[#F0EADF] px-6 py-2 flex justify-around items-center z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
+        <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-sm border-t border-[#F0EADF] px-6 pt-2 pb-safe-nav flex justify-around items-center z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
           {/* Tab 1: 首页 */}
           <button 
             onClick={() => setActiveTab('home')}
@@ -1495,7 +1495,7 @@ export default function App() {
         {/* 拦截弹窗：无法开启新牌局提示 */}
         {showActiveAlertModal && activeGame && (
           <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6">
-            <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF]">
+            <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF] max-h-[90vh] overflow-y-auto">
               <div className="w-12 h-12 rounded-full bg-[#FAF0E6] border border-[#F2D7C4] text-[#C86328] flex items-center justify-center mx-auto mb-3">
                 <AlertCircle className="w-6 h-6 stroke-[2]" />
               </div>
@@ -1530,7 +1530,7 @@ export default function App() {
         {/* 年月筛选全局弹窗：历史页面与统计页面共用同一套高品质 iOS 滚轮日历组件 */}
         {showMonthPicker && (
           <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-5">
-            <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF]">
+            <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-150 border border-[#F0EADF] max-h-[90vh] overflow-y-auto">
               {/* 弹窗头部 */}
               <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-[#F5EFE6]">
                 <div>

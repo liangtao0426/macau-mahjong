@@ -163,7 +163,7 @@ export default function CreateGame({ onBack, initialRule = '杭州麻将', onSta
   };
 
   return (
-    <div className="flex flex-col flex-1 px-5 pt-7 pb-4">
+    <div className="flex flex-col flex-1 px-5 header-safe-top pb-safe-content">
       {/* 顶部标题栏 & 返回 */}
       <div className="flex justify-between items-start mb-6">
         <div>
@@ -340,7 +340,7 @@ export default function CreateGame({ onBack, initialRule = '杭州麻将', onSta
       </section>
 
       {/* 底部开启新牌局主按钮 */}
-      <div className="mt-auto pt-4">
+      <div className="mt-8 mb-4">
         <button
           onClick={handleStart}
           className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center active:scale-[0.98] transition-all hover:bg-[#0A473C]"

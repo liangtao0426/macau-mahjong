@@ -3,10 +3,39 @@
 @tailwind utilities;
 
 @layer base {
-  body {
+  html, body {
     -webkit-tap-highlight-color: transparent;
     background-color: #F8F3EB;
+    /* 开启移动端平滑滚动与弹性回弹 */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: auto;
   }
+}
+
+/* iOS 各种屏幕分辨率与刘海/灵动岛安全区适配工具类 */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
+
+/* 顶部标题区安全边距：动态累加顶部安全区（刘海/灵动岛）边距，彻底杜绝与系统时间、电量重叠 */
+.header-safe-top {
+  padding-top: max(calc(env(safe-area-inset-top, 0px) + 1rem), 1.75rem);
+}
+
+/* 底部 Tab 导航栏安全边距：避免遮挡 iPhone 底部横条手势区 */
+.pb-safe-nav {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
+}
+
+/* 页面内容区底部留白：确保页面支持上下自由滚动，且最底部内容能完整滚动到 Tab 栏上方 */
+.pb-safe-content {
+  padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 6.5rem), 6.5rem);
+}
+
+/* 悬浮/吸底大按钮：动态定位在底部 Tab 导航栏上方 */
+.bottom-safe-action {
+  bottom: max(calc(env(safe-area-inset-bottom, 0px) + 4.25rem), 4.25rem);
 }
 
 /* 隐藏滚动条但保留功能 */
