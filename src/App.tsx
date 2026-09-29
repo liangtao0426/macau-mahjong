@@ -356,9 +356,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F3EB] flex justify-center selection:bg-[#0E5C4E]/20">
+    <div className="min-h-screen min-h-[100dvh] bg-[#F8F3EB] flex justify-center selection:bg-[#0E5C4E]/20">
       {/* 模拟手机容器 (Mobile Device Shell) */}
-      <div className="w-full max-w-md bg-[#F8F3EB] flex flex-col min-h-screen relative pb-safe-content shadow-xl">
+      <div className="w-full max-w-md bg-[#F8F3EB] flex flex-col min-h-screen min-h-[100dvh] relative shadow-xl">
         {/* 根据当前 Tab 切换主视图 */}
         {activeTab === 'score' ? (
           activeGame && scoreSubView === 'board' ? (

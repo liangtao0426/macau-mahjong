@@ -50,7 +50,7 @@ export default function HomeView({
       </div>
 
       {/* 主体内容区（增加底部留白，确保滑到最底部时内容不被固定悬浮按钮遮挡） */}
-      <main className="flex-1 px-5 space-y-5 pb-20">
+      <main className="flex-1 px-5 space-y-5 pb-safe-content">
         {/* 核心业务状态：如果当前有进行中的牌局，在首页最醒目位置展示！ */}
         {activeGame && (
           <section className="bg-gradient-to-br from-[#0E5C4E] to-[#145348] text-white rounded-3xl p-5 shadow-[0_8px_24px_rgba(14,92,78,0.22)] border border-[#237062] animate-in fade-in duration-300">
