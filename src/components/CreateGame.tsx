@@ -163,23 +163,23 @@ export default function CreateGame({ onBack, initialRule = '杭州麻将', onSta
   };
 
   return (
-    <div className="flex flex-col flex-1 px-5 header-safe-top pb-safe-content">
+    <div className="flex flex-col flex-1 px-5 header-safe-top pb-4">
       {/* 顶部标题栏 & 返回 */}
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex justify-between items-start mb-4">
         <div>
           <div className="flex items-center space-x-2.5">
             {/* 返回按钮 */}
             <button
               onClick={onBack}
-              className="w-9 h-9 rounded-full bg-[#EFE7DC] flex items-center justify-center active:scale-95 transition-transform"
+              className="w-8 h-8 rounded-full bg-[#EFE7DC] flex items-center justify-center active:scale-95 transition-transform"
             >
-              <ChevronLeft className="w-5 h-5 text-[#0E5C4E]" />
+              <ChevronLeft className="w-4 h-4 text-[#0E5C4E]" />
             </button>
-            <h1 className="text-2xl font-extrabold text-[#0E5C4E] tracking-tight">
+            <h1 className="text-xl font-extrabold text-[#0E5C4E] tracking-tight">
               新建牌局
             </h1>
           </div>
-          <p className="text-xs text-[#8C857B] mt-1.5 ml-11 font-medium">
+          <p className="text-[11px] text-[#8C857B] mt-1 ml-10 font-medium">
             设置雀局规则并安排座位
           </p>
         </div>
@@ -192,8 +192,8 @@ export default function CreateGame({ onBack, initialRule = '杭州麻将', onSta
       </div>
 
       {/* 第一块：选择玩法 */}
-      <section className="mb-6">
-        <h2 className="text-base font-bold text-[#0E5C4E] mb-3">
+      <section className="mb-4">
+        <h2 className="text-sm font-bold text-[#0E5C4E] mb-2">
           选择玩法
         </h2>
 
@@ -201,7 +201,7 @@ export default function CreateGame({ onBack, initialRule = '杭州麻将', onSta
         <div className="bg-[#EFE8DD] p-1 rounded-2xl flex items-center">
           <button
             onClick={() => setSelectedRule('杭州麻将')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
               selectedRule === '杭州麻将'
                 ? 'bg-[#0E5C4E] text-white shadow-sm'
                 : 'text-[#5A5248] hover:text-[#2C3531]'
@@ -211,7 +211,7 @@ export default function CreateGame({ onBack, initialRule = '杭州麻将', onSta
           </button>
           <button
             onClick={() => setSelectedRule('诸暨麻将')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
               selectedRule === '诸暨麻将'
                 ? 'bg-[#0E5C4E] text-white shadow-sm'
                 : 'text-[#5A5248] hover:text-[#2C3531]'
@@ -223,21 +223,21 @@ export default function CreateGame({ onBack, initialRule = '杭州麻将', onSta
       </section>
 
       {/* 第二块：安排座位 (头像 Icon 替代数字 1234) */}
-      <section className="mb-5">
-        <h2 className="text-base font-bold text-[#0E5C4E] mb-3">
+      <section className="mb-4">
+        <h2 className="text-sm font-bold text-[#0E5C4E] mb-2">
           安排座位
         </h2>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {players.map((item, index) => (
-            <div key={item.seat} className="flex items-center space-x-3">
+            <div key={item.seat} className="flex items-center space-x-2.5">
               {/* 卡通头像图标 */}
-              <div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-[#E8DFC8]">
+              <div className="relative w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-2xs border border-[#E8DFC8]">
                 {PLAYER_AVATARS[index % PLAYER_AVATARS.length]}
               </div>
 
               {/* 输入框卡片 */}
-              <div className="bg-white rounded-2xl px-4 py-2.5 border border-[#F0EADF] flex-1 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)] focus-within:border-[#0E5C4E]/40 transition-colors">
+              <div className="bg-white rounded-2xl px-3.5 py-2 border border-[#F0EADF] flex-1 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)] focus-within:border-[#0E5C4E]/40 transition-colors">
                 <input
                   type="text"
                   value={item.name}
@@ -245,108 +245,109 @@ export default function CreateGame({ onBack, initialRule = '杭州麻将', onSta
                   placeholder={`请输入座位 ${index + 1} 玩家姓名`}
                   className="bg-transparent text-sm font-bold text-[#2C3531] outline-none w-full placeholder:text-[#B5AD9F] placeholder:font-normal"
                 />
-                <Edit3 className="w-4 h-4 text-[#A0988C] shrink-0 ml-2 cursor-pointer" />
+                <Edit3 className="w-3.5 h-3.5 text-[#A0988C] shrink-0 ml-1.5 cursor-pointer" />
               </div>
             </div>
           ))}
         </div>
+      </section>
 
-        {/* 中间麻将分隔装饰图标 */}
-        <div className="flex items-center justify-center my-5">
-          <div className="h-[1px] bg-[#EADFD0] flex-1"></div>
-          <div className="mx-3 px-2 py-1 bg-[#C86328] rounded flex items-center justify-center shadow-xs">
-            <div className="w-3.5 h-4 bg-[#F8F3EB] rounded-xs border border-[#A04512] flex flex-col items-center justify-around py-0.5">
-              <span className="w-1 h-1 bg-[#C86328] rounded-full inline-block"></span>
-              <span className="w-1 h-1 bg-[#C86328] rounded-full inline-block"></span>
+      {/* 第三块：常用牌友（仅在有常用牌友时展示，没有时隐藏以保证“开启新牌局”完整露出一屏内） */}
+      {frequentFriends.length > 0 && (
+        <>
+          {/* 中间麻将分隔装饰图标 */}
+          <div className="flex items-center justify-center my-3.5">
+            <div className="h-[1px] bg-[#EADFD0] flex-1"></div>
+            <div className="mx-3 px-2 py-0.5 bg-[#C86328] rounded flex items-center justify-center shadow-xs">
+              <div className="w-3 h-3.5 bg-[#F8F3EB] rounded-xs border border-[#A04512] flex flex-col items-center justify-around py-0.5">
+                <span className="w-1 h-1 bg-[#C86328] rounded-full inline-block"></span>
+                <span className="w-1 h-1 bg-[#C86328] rounded-full inline-block"></span>
+              </div>
             </div>
+            <div className="h-[1px] bg-[#EADFD0] flex-1"></div>
           </div>
-          <div className="h-[1px] bg-[#EADFD0] flex-1"></div>
-        </div>
-      </section>
 
-      {/* 第三块：常用牌友 (支持删除与管理) */}
-      <section className="mb-6">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-base font-bold text-[#0E5C4E]">
-            常用牌友
-          </h2>
-          {frequentFriends.length > 0 && (
-            <button
-              onClick={() => setIsManagingFriends(!isManagingFriends)}
-              className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center space-x-1 transition-colors ${
-                isManagingFriends
-                  ? 'bg-red-100 text-red-600 border border-red-200'
-                  : 'text-[#8C857B] hover:text-[#0E5C4E]'
-              }`}
-            >
-              {isManagingFriends ? (
-                <span>完成删除</span>
-              ) : (
-                <>
-                  <Trash2 className="w-3 h-3 inline-block" />
-                  <span>管理</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
+          <section className="mb-4">
+            <div className="flex justify-between items-center mb-2.5">
+              <h2 className="text-sm font-bold text-[#0E5C4E]">
+                常用牌友
+              </h2>
+              <button
+                onClick={() => setIsManagingFriends(!isManagingFriends)}
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center space-x-1 transition-colors ${
+                  isManagingFriends
+                    ? 'bg-red-100 text-red-600 border border-red-200'
+                    : 'text-[#8C857B] hover:text-[#0E5C4E]'
+                }`}
+              >
+                {isManagingFriends ? (
+                  <span>完成删除</span>
+                ) : (
+                  <>
+                    <Trash2 className="w-3 h-3 inline-block" />
+                    <span>管理</span>
+                  </>
+                )}
+              </button>
+            </div>
 
-        {frequentFriends.length > 0 ? (
-          <div className="flex flex-wrap gap-2.5">
-            {frequentFriends.map((friend) => {
-              const isSelected = players.some((p) => p.name === friend.name);
-              return (
-                <div
-                  key={friend.name}
-                  onClick={() => handleFriendClick(friend.name)}
-                  className={`relative px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 transition-all cursor-pointer active:scale-95 ${
-                    isManagingFriends
-                      ? 'bg-red-50 border border-red-200 text-red-700 animate-pulse'
-                      : isSelected
-                      ? 'bg-[#E2F1ED] border border-[#B3DCD4] text-[#0E5C4E] shadow-2xs'
-                      : 'bg-white border border-[#EAE3D7] text-[#5A5248] hover:border-[#0E5C4E]/30'
-                  }`}
-                >
-                  <span>{friend.name}</span>
-                  {isSelected && !isManagingFriends && (
-                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                  )}
-                  {/* 删除按钮 */}
-                  {isManagingFriends ? (
-                    <span 
-                      onClick={(e) => handleDeleteFriend(friend.name, e)}
-                      className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold ml-1 hover:bg-red-600"
-                    >
-                      ✕
-                    </span>
-                  ) : (
-                    <span
-                      onClick={(e) => handleDeleteFriend(friend.name, e)}
-                      className="text-[#B0A89C] hover:text-red-500 transition-colors ml-1"
-                      title="删除此牌友"
-                    >
-                      <X className="w-3 h-3" />
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="bg-white/60 border border-dashed border-[#E5DCD0] rounded-2xl p-4 text-center text-xs text-[#8C857B]">
-            暂无常用牌友，开启新牌局后将自动保存牌友名字
-          </div>
-        )}
-      </section>
+            <div className="flex flex-wrap gap-2">
+              {frequentFriends.map((friend) => {
+                const isSelected = players.some((p) => p.name === friend.name);
+                return (
+                  <div
+                    key={friend.name}
+                    onClick={() => handleFriendClick(friend.name)}
+                    className={`relative px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-1.5 transition-all cursor-pointer active:scale-95 ${
+                      isManagingFriends
+                        ? 'bg-red-50 border border-red-200 text-red-700 animate-pulse'
+                        : isSelected
+                        ? 'bg-[#E2F1ED] border border-[#B3DCD4] text-[#0E5C4E] shadow-2xs'
+                        : 'bg-white border border-[#EAE3D7] text-[#5A5248] hover:border-[#0E5C4E]/30'
+                    }`}
+                  >
+                    <span>{friend.name}</span>
+                    {isSelected && !isManagingFriends && (
+                      <Check className="w-3 h-3 stroke-[2.5]" />
+                    )}
+                    {/* 删除按钮 */}
+                    {isManagingFriends ? (
+                      <span 
+                        onClick={(e) => handleDeleteFriend(friend.name, e)}
+                        className="w-3.5 h-3.5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold ml-1 hover:bg-red-600"
+                      >
+                        ✕
+                      </span>
+                    ) : (
+                      <span
+                        onClick={(e) => handleDeleteFriend(friend.name, e)}
+                        className="text-[#B0A89C] hover:text-red-500 transition-colors ml-0.5"
+                        title="删除此牌友"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
 
       {/* 底部开启新牌局主按钮 */}
-      <div className="mt-8 mb-4">
+      <div className="mt-4 mb-2">
         <button
           onClick={handleStart}
           className="w-full py-3.5 bg-[#0E5C4E] text-white font-bold text-base rounded-full shadow-[0_6px_20px_rgba(14,92,78,0.25)] flex items-center justify-center active:scale-[0.98] transition-all hover:bg-[#0A473C]"
         >
           开启新牌局
         </button>
+        {frequentFriends.length === 0 && (
+          <p className="text-center text-[11px] text-[#A0988C] mt-2 font-medium">
+            开启牌局后将自动沉淀常用牌友，下次可一键选人
+          </p>
+        )}
       </div>
     </div>
   );
