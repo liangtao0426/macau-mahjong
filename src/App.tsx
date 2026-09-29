@@ -381,6 +381,22 @@ export default function App() {
     }
   }, [activeGame]);
 
+  // 前往历史页面查看全部对局战绩
+  const handleViewAllHistory = () => {
+    setHistoryRuleFilter('全部');
+    const now = new Date();
+    setSelectedYear(Math.max(START_YEAR, now.getFullYear()));
+    setSelectedMonth(now.getMonth() + 1);
+    setActiveTab('history');
+  };
+
+  // 首页“最近战绩”最多展示最近3场（若有进行中牌局占1场，则取历史前2场；否则取历史前3场）
+  const maxRecentHistoryCount = activeGame ? 2 : 3;
+  const recentHistoryList = useMemo(() => {
+    return historyList.slice(0, maxRecentHistoryCount);
+  }, [historyList, maxRecentHistoryCount]);
+  const totalRecentMatches = (activeGame ? 1 : 0) + historyList.length;
+  const hasMoreRecentMatches = totalRecentMatches > 3;
 
   // 尝试前往新建牌局（如果有正在进行的牌局，则拦截）
   const handleTryCreateGame = () => {
@@ -654,14 +670,15 @@ export default function App() {
                     )}
                   </div>
                   <button 
-                    onClick={() => setActiveTab('history')}
-                    className="text-xs text-[#8C857B] hover:text-[#0E5C4E] font-medium transition-colors"
+                    onClick={handleViewAllHistory}
+                    className="text-xs text-[#0E5C4E] hover:text-[#0A473C] font-semibold flex items-center transition-colors py-1 px-2 rounded-lg hover:bg-[#EBF4F2] active:scale-95"
                   >
-                    查看全部
+                    <span>查看全部</span>
+                    <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
                   </button>
                 </div>
 
-                {/* 战绩列表：优先展示正在记录的牌局（与记分盘实时联动），其次展示历史完成牌局 */}
+                {/* 战绩列表：优先展示正在记录的牌局（与记分盘实时联动），其次展示最近的历史完成牌局，最多展示3场 */}
                 <div className="space-y-3.5">
                   {/* 1. 正在记录中的牌局卡片（与记分盘实时联动） */}
                   {activeGame && (
@@ -732,8 +749,8 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* 2. 已结束的历史对局列表 */}
-                  {historyList.map((item) => (
+                  {/* 2. 最近已结束的历史对局列表（首页只展示最近三场） */}
+                  {recentHistoryList.map((item) => (
                     <div 
                       key={item.id} 
                       className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-[#F0EADF]"
@@ -792,7 +809,18 @@ export default function App() {
                     </div>
                   ))}
 
-                  {/* 3. 无任何对局数据时的空状态 */}
+                  {/* 3. 查看全部更多历史战绩入口按钮（超出3场时底部显示） */}
+                  {hasMoreRecentMatches && (
+                    <button
+                      onClick={handleViewAllHistory}
+                      className="w-full py-3 bg-white hover:bg-[#FAF7F2] rounded-2xl border border-[#F0EADF] text-[#0E5C4E] font-bold text-xs flex items-center justify-center space-x-1.5 shadow-2xs active:scale-[0.99] transition-all"
+                    >
+                      <span>查看全部历史战绩（共 {totalRecentMatches} 场）</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-[#0E5C4E]" />
+                    </button>
+                  )}
+
+                  {/* 4. 无任何对局数据时的空状态 */}
                   {!activeGame && historyList.length === 0 && (
                     <div className="bg-white/70 rounded-2xl p-7 text-center border border-dashed border-[#E5DCD0]">
                       <div className="w-11 h-11 mx-auto mb-2 rounded-full bg-[#FAF0E6] flex items-center justify-center text-[#C86328]">
