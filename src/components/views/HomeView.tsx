@@ -136,7 +136,7 @@ export default function HomeView({
                 </h3>
                 <p className="text-[11px] text-[#A0988C] leading-relaxed">
                   标准杭麻 · 白板财神<br />
-                  支持财神、暴头、飞头、杠开等本地规则
+                  三摊承包，有财必敲，刺激多变
                 </p>
               </div>
               <div className="mt-4 pt-2.5 border-t border-[#F5EFE6] flex items-center justify-between text-xs text-[#0E5C4E] font-bold">
@@ -164,7 +164,7 @@ export default function HomeView({
                 </h3>
                 <p className="text-[11px] text-[#A0988C] leading-relaxed">
                   诸暨十三张 · 敲响包牌<br />
-                  支持自摸、抢杠、包牌等多变清脆打法
+                  手翻财神，二台起步，小心点炮
                 </p>
               </div>
               <div className="mt-4 pt-2.5 border-t border-[#F5EFE6] flex items-center justify-between text-xs text-[#C86328] font-bold">
