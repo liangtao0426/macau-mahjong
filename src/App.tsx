@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Clock,
   Trash2,
-  X
+  X,
+  Crown
 } from 'lucide-react';
 import CreateGame from './components/CreateGame';
 import GameBoard, { GameData, RoundRecord } from './components/GameBoard';
@@ -1436,19 +1437,46 @@ export default function App() {
                   return (
                     <div
                       key={player.name}
-                      className="bg-white rounded-2xl p-3.5 border border-[#F0EADF] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between"
+                      className={`rounded-2xl p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between transition-all ${
+                        idx === 0
+                          ? 'bg-gradient-to-r from-amber-50/40 via-white to-white border border-[#FDE68A]'
+                          : idx === 1
+                          ? 'bg-gradient-to-r from-slate-50/50 via-white to-white border border-[#E2E8F0]'
+                          : idx === 2
+                          ? 'bg-gradient-to-r from-orange-50/30 via-white to-white border border-[#FED7AA]'
+                          : 'bg-white border border-[#F0EADF]'
+                      }`}
                     >
-                      {/* 左侧：排名徽标 + 姓名 + 胜负场次 */}
+                      {/* 左侧：排名专属徽标 + 姓名 + 胜负场次 */}
                       <div className="flex items-center space-x-3">
-                        <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${
-                            idx === 0
-                              ? 'bg-[#C86328] text-white shadow-2xs'
-                              : 'bg-[#FAF0E6] text-[#8C857B]'
-                          }`}
-                        >
-                          {idx + 1}
-                        </div>
+                        {idx === 0 ? (
+                          /* 冠军专属徽标：金牌 + 皇冠 */
+                          <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
+                            <Crown className="w-3.5 h-3.5 text-[#F59E0B] fill-[#FDE047] absolute -top-2.5 left-1/2 -translate-x-1/2 drop-shadow-xs z-10" />
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FDE047] via-[#F59E0B] to-[#D97706] text-white font-black text-xs flex items-center justify-center shadow-[0_2px_8px_rgba(217,119,6,0.35)] ring-2 ring-[#FEF08A]/80">
+                              1
+                            </div>
+                          </div>
+                        ) : idx === 1 ? (
+                          /* 亚军专属徽标：白金银牌 */
+                          <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#F1F5F9] via-[#94A3B8] to-[#475569] text-white font-black text-xs flex items-center justify-center shadow-[0_2px_8px_rgba(71,85,105,0.3)] ring-2 ring-[#E2E8F0]">
+                              2
+                            </div>
+                          </div>
+                        ) : idx === 2 ? (
+                          /* 季军专属徽标：赤铜铜牌 */
+                          <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FED7AA] via-[#EA580C] to-[#9A3412] text-white font-black text-xs flex items-center justify-center shadow-[0_2px_8px_rgba(154,52,18,0.3)] ring-2 ring-[#FFEDD5]">
+                              3
+                            </div>
+                          </div>
+                        ) : (
+                          /* 第4名及以后：常规素雅米灰徽标 */
+                          <div className="w-7 h-7 rounded-full bg-[#FAF0E6] text-[#8C857B] font-extrabold text-xs flex items-center justify-center shrink-0 border border-[#EFE8DD]">
+                            {idx + 1}
+                          </div>
+                        )}
                         <div>
                           <div className="text-sm font-extrabold text-[#2C3531]">
                             {player.name}
